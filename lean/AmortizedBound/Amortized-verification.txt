@@ -1,0 +1,50 @@
+Verification of the Amortized Disjointness formalization
+
+Reference and scope
+
+The reference is main.tex in the supplied amortized_bound.zip. AmortizedBound.lean contains the formalization in a single source file. Its external imports come from the public audited Disjointness project and its pinned Lean dependencies. No manuscript archive is an input to the Lean build.
+
+Main theorems
+
+1. AmortizedBound.total_work proves a lower bound of Ω(n (log N / log log N)²) on expected total word probes for one fixed, data-structure-independent distribution. The machine preprocesses N query sets. Each hard set contains n elements, and n distinct insertions each have a query immediately afterward. The average includes the preprocessing tape, update and query randomness, query rows and query indices. Preprocessing probes are free. Writes made by queries persist and are charged. Lean uses n = floor(N^(1/4)); fourth_root proves n⁴ ≤ N < (n+1)⁴.
+
+2. AmortizedBound.query_tradeoff proves t_q = Ω((log N / log(t_u w))²) for logarithmic word width and subpolynomial amortized insertion cost t_u ≥ 1. The expectation for each update-prefix budget is taken separately on that fixed input. The final query can follow every fresh insertion prefix, at a stopping position unknown to the machine. The error bound is 1/4096 on each fixed query history. Termination is almost sure. A source computation that does not terminate is assigned infinite cost. The corollary for max(t_u,t_q) follows with scale (log N / log log N)².
+
+Lean verification
+
+Lean 4.19.0 checked 1,625 declarations of the new source file, including 1,081 theorems and generated lemmas. Their combined transitive axiom set is exactly propext, Quot.sound and Classical.choice. A separate pass traced both main proofs through the machine budgets, physical simulation, tape selection, communication bound and entropy-intersection lemma. It also traced the graph and maximum-operation corollaries to the source lower bounds and graph simulations. The delivered source and checker were rebuilt with the pinned dependencies from a fresh extraction of the audited public project.
+
+Proof correspondence
+
+• Randomized execution and hard inputs (manuscript sections 2 and 3.1). The machine has a word-sized address and word alphabet, arbitrary preprocessing, and a single independent master tape. Only the physical memory crosses operations. The real expectations are derived from measurable observations on the original tape space. A countable description of the observations preserves costs and errors while permitting the proof to examine internal write traces.
+
+• Simulation (section 3.2). The proof splits the chosen history before, within and after the selected epoch. It reconstructs the same memory used by the original machine. It retains writes from earlier queries, compares the physical replay with the unrestricted selected query and charges the disjoint sets of last-written addresses only once. Time and epoch averages charge the full alternating execution or the allowed single-query prefixes. The packet uses actual advice, sampled cells, an encoded reply, and independent fair padding bits. Both sides of the contradiction use the same acceptance event, meaning “accept and return one.”
+
+• Communication (section 3.3). The actual input rows, block coordinates, outside coordinates, and private randomness have the product law specified in the paper. Conditioning on transcripts uses the messages of the constructed protocol. The Shannon-entropy intersection bound allows arbitrary dependence among the coordinates of either word. The proof obtains overlap probability at least s/(4n). The protocol contradiction compares a strict lower bound on conditional error with the simulation's upper bound s/(64n).
+
+• Asymptotics (section 3.4). The proofs implement the dyadic rounding of the geometric epoch base, the explicit bit budgets, the normalization and sampling-tail estimates, and the passage from failure of an eventual bound to a cofinal subsequence. Both headline theorems discharge the finite-machine contradiction within Lean. They take no simulation theorem or conjectured communication inequality as a premise.
+
+Graph applications
+
+• Incremental directed reachability and incremental subgraph connectivity. GraphCorollaries.total_work and GraphCorollaries.query_tradeoff quantify over every sufficiently large number of vertices. Each insertion maps to one graph update and each query to one graph query. The physical simulation preserves probe counts, memory writes, per-history error and the unknown position of the final query. GraphCorollaries.maximum gives the maximum-operation consequence. GraphCorollaries.disjointness_maximum is the corresponding statement for Disjointness itself.
+
+• Fully dynamic triangle detection. TriangleCorollary.triangle_vertices proves the expected total-work bound for each sufficiently large vertex count. The fixed image distribution has 3n updates and n queries. Each original query inserts a temporary edge, tests for a triangle, and removes that edge. The simulated machine retains all three calls’ memory effects and complements the middle answer. The formal wrapper records the target operation position using one extra word. It pays exactly 3n additional probes on the hard sequence, which the proof absorbs into the asymptotic lower bound. An almost-sure replacement of the tape preserves each query's error probability. TriangleCorollary.maximum_vertices derives the maximum-operation consequence from an expected cost bound on every fixed legal graph sequence.
+
+• Geometry. The incidence constructions have 2N+1 vertices before padding and at most one isolated padding vertex is needed. The directed graph is acyclic with depth at most two. The formalization also bounds the edge count by O(V^(5/4)).
+
+Reproduction
+
+Unzip Disjointness-Lean-audited.zip. Place AmortizedBound.lean and CheckAmortized.lean in the extracted DisjointnessLean directory alongside lakefile.toml. With Lean’s toolchain manager and Git available, run the following from that directory. The project README includes an alternative cache command for macOS.
+
+    lake exe cache get
+    lake build DisjointnessDraft
+    lake env lean -o .lake/build/lib/lean/AmortizedBound.olean AmortizedBound.lean
+    lake env lean CheckAmortized.lean
+
+The optional final check independently inspects the axioms of all theorems, safe definitions and safe opaque declarations in the new module. It also inspects the proof dependencies of the main results.
+
+Artifact fingerprints (SHA-256)
+
+amortized_bound.zip  ada8a600b22001aeee44463ab77b5eeb59329221931b01d6da9f46a1937bb475
+AmortizedBound.lean  82c108605cc9ee92fa6b4be3b678568439e838f927394eac8c44648ded291010
+CheckAmortized.lean  c704d7eef4b6bcf9f5f828d73c11b771590fcc781a26063effb4ff649f1a8e5d

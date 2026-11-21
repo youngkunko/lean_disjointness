@@ -1,0 +1,571 @@
+\appendix
+\crefalias{section}{appendix}
+
+% =====================================================================
+\section{Reductions to other problems}\label{sec:graphs}
+% =====================================================================
+
+For completeness and reader convenience, we collect the reductions yielding the applications of \cref{thm:main}. Each construction identifies its published source and any adaptations. \Cref{lem:app-transfer} gives the common simulation, \cref{tab:appendix-transfers} indexes the bounds, and \cref{sec:streaming-regex} proves the streaming separation.
+
+\paragraph{Conventions.}
+Let $S_1,\dots,S_m\subseteq[n]$ be the preprocessed sets, $X\subseteq[n]$ the evolving set, and $q\in[m]$ the final query. Sets are indexed by $i$ and elements by $j$. We write $M_{ij}:=\mathbf 1_{j\in S_i}$, $x_j:=\mathbf 1_{j\in X}$ and $c_i:=\abs{S_i\cap X}$, so that $S_q\cap X=\emptyset$ exactly when $c_q=0$, and we take $m=n$. The data structures we build keep the characteristic vector of $X$ and ignore repeated insertions, so every inserted element is new. The initial target instance is built during Phase~I, which is not charged. Every target instance has size $N=n^{\Theta(1)}$; padding with parts that no query sees, such as isolated vertices, extends it to every larger size with $\log N=\Theta(\log n)$, and we discuss the padding only when it needs care. Fixed thresholds may depend on $N$ but are chosen before updates. Numbered references to \cite{abboud_popular_2014,henzinger_unifying_2015,abboud_popular_2016,van_den_brand_dynamic_2019,dallant_conditional_2022,jin_tight_2022} are to the full versions listed in the bibliography, unless stated otherwise.
+
+For a target data structure on instances of size $N$, in the model of \cref{sec:model}, with word size $w=\Theta(\log N)$, worst-case update time $t_u$ and expected query time $t_q$, let
+\[
+\mathcal L_N:=\left(\frac{\log N}{\log(t_u w)}\right)^2.
+\]
+
+\begin{lemma}[Transfer]\label{lem:app-transfer}
+Consider a reduction from insert-only multiphase Disjointness with $m=n$ to a dynamic problem on instances of size $N=n^{\Theta(1)}$. The initial target instance depends only on $S_1,\dots,S_m$, and the reduction has the following properties.
+\begin{enumerate}[label=(\roman*), leftmargin=*]
+  \item Each insertion into $X$ is simulated by $O(1)$ target updates, and the query $q$ by $O(1)$ target updates and target queries, in some order. Each source operation also probes $O(1)$ further cells, and the answer to $q$ is determined by the answers to the target queries and the contents of these cells.
+  \item The target operations form a valid operation sequence for the target problem, determined by $S_1,\dots,S_m$, the sequence of insertions and $q$, and each of their arguments occupies $O(1)$ words.
+\end{enumerate}
+Then every zero-error target data structure satisfies $t_u+t_q=\Omega(\mathcal L_N)$, and even $t_q=\Omega(\mathcal L_N)$ if the query $q$ is simulated without target updates. In either case, $\max(t_u,t_q)=\Omega\big((\log N/\log\log N)^2\big)$.
+\end{lemma}
+\begin{proof}
+We build a data structure for insert-only multiphase Disjointness. It stores the memory of the target data structure and $O(1)$ auxiliary tables, such as the characteristic vector of $X$, in disjoint address ranges, which changes the word size by at most a constant factor; so each insertion probes $O(t_u)$ cells. During the query, it keeps every write of the simulated target operations, including writes by target queries, in temporary workspace, from which it answers later reads of the same cells. This reproduces the target execution while leaving the memory unchanged, as \cref{prob:multiphase} requires and \cref{sec:model} allows. By~(ii), each target query runs on an operation sequence that does not depend on the random tape, so it probes at most $t_q$ cells in expectation. Hence the query probes $O(t_u+t_q)$ cells in expectation, and $O(t_q)$ if it uses no target updates. Since $\log N=\Theta(\log n)$, \cref{thm:main} gives the first two bounds. For the last one, if $t_u\ge\log^2N$ there is nothing to prove; otherwise $\log(t_uw)=O(\log\log N)$.
+\end{proof}
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.12}
+\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.68\textwidth}>{\raggedright\arraybackslash}p{0.14\textwidth}p{\dimexpr0.18\textwidth-4\tabcolsep\relax}@{}}
+\caption{The bounds of this appendix. Each listed quantity is $\Omega(\mathcal L_N)$, so in every case $\max(t_u,t_q)=\Omega\big((\log N/\log\log N)^2\big)$.}\label{tab:appendix-transfers}\\
+\toprule
+Problem & Bounded quantity & Section\\
+\midrule
+\endfirsthead
+\multicolumn{3}{@{}l}{\tablename~\thetable\ (continued)}\\
+\toprule
+Problem & Bounded quantity & Section\\
+\midrule
+\endhead
+\multicolumn{3}{r@{}}{\footnotesize Continued on the next page.}\\
+\endfoot
+\bottomrule
+\endlastfoot
+Directed reachability; undirected shortest paths, exact or within a factor $\alpha<2$; subgraph connectivity & $t_q$ & \ref{sec:graph-problems}\\
+$s$-$t$ reachability; \#SSR; undirected $s$-$t$ shortest paths, exact or within a factor $\alpha<5/3$; strong connectivity; cycle detection; triangle detection & $t_u+t_q$ & \ref{sec:graph-problems}\\
+Bipartite perfect matching; maximum matching size & $t_u+t_q$ & \ref{sec:bipartite-matching}\\
+Exact densest subgraph, or a fixed density threshold & $t_u+t_q$ & \ref{sec:app-density}\\
+Nearest marked vertex, exact or within a one-sided factor $\alpha<3$ & $t_q$ & \ref{sec:app-marked-distance}\\
+Planar distance, unit or positive weights & $t_q$ & \ref{sec:planar-distance}\\
+Planar directed girth, unit or positive weights & $t_u+t_q$ & \ref{sec:planar-girth}\\
+Planar diameter, positive weights & $t_u+t_q$ & \ref{sec:planar-diameter}\\
+Planar bipartite maximum-weight matching & $t_u+t_q$ & \ref{sec:planar-matching}\\
+Set disjointness; Pagh's problem; range mode & $t_q$ & \ref{sec:other-problems}\\
+Langerman's problem; Erickson's problem & $t_u+t_q$ & \ref{sec:other-problems}\\
+Inverse-entry zero testing over prime fields & $t_q$ & \ref{sec:app-inverse}\\
+Determinant over prime fields, or whether it equals one & $t_u+t_q$ & \ref{sec:app-determinant}\\
+Three-dimensional convex-hull vertex counting & $t_u+t_q$ & \ref{sec:hull}\\
+Three-dimensional maximal-point counting & $t_u+t_q$ & \ref{sec:maxima}\\
+Two-dimensional distinct-color counting & $t_q$ & \ref{sec:distinct-color-counting}\\
+Internal dictionary matching & $t_q$ & \ref{sec:internal-dictionary}\\
+Binary Hamming-distance threshold & $t_q$ & \ref{sec:hamming-threshold}\\
+Active-document existence & $t_q$ & \ref{sec:active-documents}\\
+\end{longtable}
+\endgroup
+
+% =====================================================================
+\subsection{Graph problems}\label{sec:graph-problems}
+% =====================================================================
+
+Here $N$ is the number of vertices. Except in subgraph connectivity and in \cref{sec:app-marked-distance}, the graph initially has no edges, and an update inserts an edge.
+
+In \emph{directed reachability}, queries test whether one vertex reaches another; \emph{$s$-$t$ reachability} fixes both vertices, and \emph{\#SSR} counts vertices other than a fixed source reachable from it. \emph{Strong-connectivity} queries test a pair, count strongly connected components, or report the largest component's size~\cite{abboud_popular_2014,haeupler_incremental_2012}. \emph{Cycle detection} tests for a directed cycle~\cite{haeupler_incremental_2012,chen_almost-linear_2024}, and \emph{triangle detection} for an undirected triangle. \emph{Undirected shortest-path} queries return a distance $d$, or an approximation in $[d,\alpha d]$, preserving $d=\infty$; the $s$-$t$ version fixes both vertices. In \emph{subgraph connectivity}, updates turn on vertices of a fixed undirected graph, and queries test connectivity in the induced subgraph of vertices that are on.
+
+\paragraph{The reduction.}
+The reductions for reachability, shortest paths and subgraph connectivity are those of \Patrascu~\cite[Appendix~A]{patrascu_mihai_towards_2010}. Let $G$ be the graph with vertices $u_1,\dots,u_m$, $v_1,\dots,v_n$ and $t$, and with the edges $\{u_i,v_j\}$ for $j\in S_i$, inserted in Phase~I, and $\{v_j,t\}$ for $j\in X$: inserting $j$ into $X$ inserts $\{v_j,t\}$. In the directed problems, these edges are directed from $u_i$ to $v_j$ and from $v_j$ to $t$, so $G$ is a DAG of depth $2$. For subgraph connectivity, the fixed graph has the edges $\{u_i,v_j\}$ for $j\in S_i$ and $\{v_j,t\}$ for all $j$; initially exactly the $u_i$ and $t$ are on, and inserting $j$ into $X$ turns $v_j$ on. (\Patrascu instead turns on only the queried vertex $u_q$, in the final phase.)
+
+\paragraph{Queries without an update.}
+The out-neighbors of $u_q$ are the $v_j$ with $j\in S_q$, and $v_j$ has an edge to $t$ exactly when $j\in X$, so $t$ is reachable from $u_q$ exactly when $S_q\cap X\ne\emptyset$. Reversing all edges gives the version with the fixed source $t$. In the undirected graph, the distance between $u_q$ and $t$ is $2$ in this case, and at least $4$ otherwise, since $G$ is bipartite with $u_q$ and $t$ on the same side; so an approximation within any factor $\alpha<2$ tells the two cases apart. In subgraph connectivity, the neighbors of $u_q$ that are on are the $v_j$ with $j\in S_q\cap X$, and each of them is adjacent to $t$, so $u_q$ and $t$ are connected exactly when $S_q\cap X\ne\emptyset$.
+
+\paragraph{Queries with one update.}
+\begin{itemize}[leftmargin=*]
+  \item \emph{$s$-$t$ reachability, \#SSR and $s$-$t$ shortest paths.} The directed cases are selector variants of \Patrascu's reduction, and the undirected case specializes Henzinger et al.~\cite[Lemma~3.2]{henzinger_unifying_2015} to a single set. Add a vertex $r$, isolated in Phases~I and~II, as the fixed source, with the fixed target $t$. The query $q$ inserts the edge $(r,u_q)$, or $\{r,u_q\}$ in the undirected case. Then $t$ is reachable from $r$ exactly when $S_q\cap X\ne\emptyset$, and the number of vertices other than $r$ that are reachable from $r$ is $\abs{S_q}+1+\mathbf 1_{S_q\cap X\ne\emptyset}$, which determines the answer since we store $\abs{S_q}$. In the undirected case, the distance between $r$ and $t$ is $3$ if $S_q\cap X\ne\emptyset$, and at least $5$ otherwise, so an approximation within any factor $\alpha<5/3$ tells the two cases apart.
+  \item \emph{Strong connectivity and cycle detection.} The query $q$ inserts the edge $(t,u_q)$. Since $G$ is acyclic, every cycle uses this edge, so a cycle exists exactly when $t$ is reachable from $u_q$ in $G$, that is, when $S_q\cap X\ne\emptyset$. In that case $u_q$, $t$ and some $v_j$ lie in one strongly connected component; otherwise every strongly connected component is a single vertex. So each of the three strong-connectivity queries tells the two cases apart.
+  \item \emph{Triangle detection.} This specializes Henzinger et al.~\cite[Lemma~3.3]{henzinger_unifying_2015} to a single set. The query $q$ inserts the edge $\{u_q,t\}$. Since $G$ is bipartite with $u_q$ and $t$ on the same side, every triangle consists of $u_q$, $t$ and some $v_j$ with $j\in S_q\cap X$.
+\end{itemize}
+
+\begin{corollary}[Dynamic graph problems]\label{thm:reach}
+Consider a zero-error cell-probe data structure on $N$ vertices with word size $w=\Theta(\log N)$, worst-case update time $t_u$ and expected query time $t_q$.
+\begin{enumerate}[label=(\alph*), leftmargin=*]
+  \item For incremental directed reachability, incremental undirected shortest paths, exact or within any factor $\alpha<2$, and incremental subgraph connectivity, $t_q=\Omega(\mathcal L_N)$. For directed reachability, this holds already on depth-$2$ DAGs whose queries ask whether a fixed sink is reachable, or whether a vertex is reachable from a fixed source. For undirected shortest paths, it holds already for distances from a fixed source.
+  \item For incremental $s$-$t$ reachability, \#SSR, undirected $s$-$t$ shortest paths, exact or within any factor $\alpha<5/3$, strong connectivity in each of the three forms above, cycle detection, and triangle detection, $t_u+t_q=\Omega(\mathcal L_N)$.
+\end{enumerate}
+In particular, $\max(t_u,t_q)=\Omega\big((\log N/\log\log N)^2\big)$ for all of these problems.
+\end{corollary}
+\begin{proof}
+The graph has at most $2n+2$ vertices. Each insertion into $X$ is simulated by one update, and the query by one query, preceded by one update in~(b). So \cref{lem:app-transfer} gives the bounds.
+\end{proof}
+
+\subsubsection{Bipartite matching}\label{sec:bipartite-matching}
+
+The graph is bipartite and unweighted, an update inserts an edge, and a query asks for the size of a maximum matching, or whether a perfect matching exists. We specialize the reduction from reachability to bipartite matching of Abboud and Vassilevska Williams~\cite[Lemma~6.2]{abboud_popular_2014}. The two sides are
+\[
+ L=\{s_L\}\cup\{u_{i,L}:i\in[n]\}\cup\{v_{j,L}:j\in[n]\},
+ \qquad
+ R=\{t_R\}\cup\{u_{i,R}:i\in[n]\}\cup\{v_{j,R}:j\in[n]\}.
+\]
+In Phase~I, insert the edges $\{u_{i,L},u_{i,R}\}$ and $\{v_{j,L},v_{j,R}\}$, and the edges $\{u_{i,L},v_{j,R}\}$ for $j\in S_i$. Inserting $j$ into $X$ inserts $\{v_{j,L},t_R\}$. The query $q$ inserts $\{s_L,u_{q,R}\}$, and asks whether there is a perfect matching.
+
+The edges $\{u_{i,L},u_{i,R}\}$ and $\{v_{j,L},v_{j,R}\}$ form a matching of size $2n$, which leaves exactly $s_L$ and $t_R$ unmatched, and its augmenting paths are exactly
+\[
+ s_L,\ u_{q,R},\ u_{q,L},\ v_{j,R},\ v_{j,L},\ t_R
+ \qquad (j\in S_q\cap X).
+\]
+So a perfect matching, of size $2n+1$, exists exactly when $S_q\cap X\ne\emptyset$, and otherwise the maximum matching has size $2n$. The graph has $4n+2$ vertices. For perfect matching, take even $N$ and pad with disjoint edges; for maximum matching size, an isolated vertex also permits odd $N$. Each insertion into $X$ is one update, and the query is one update and one query, so \cref{lem:app-transfer} gives $t_u+t_q=\Omega(\mathcal L_N)$.
+
+\subsubsection{Exact densest subgraph}\label{sec:app-density}
+
+The density of a nonempty vertex set $U$ is $\abs{E(G[U])}/\abs U$. The graph is simple and unweighted, an update inserts an edge, and a query asks for the maximum density $\rho^*(G)$ over all nonempty $U$, or whether $\rho^*(G)\ge\theta$ for a threshold $\theta$ fixed in advance. We specialize the reduction of Henzinger et al.~\cite[Section~3.6, Theorems~3.23 and~3.25]{henzinger_unifying_2015}, whose vector-matrix-vector formulation we use with the row vector $e_q$, supplied in the final phase.
+
+Let $k:=6n$. For each $i\in[n]$, the graph has a triple $R_i$ of vertices with a designated vertex $r_i\in R_i$, and for each $j\in[n]$, a triple $Y_j$ with a designated vertex $y_j\in Y_j$. For each $(i,j)\in[n]^2$, it has a set $P_{ij}$ of $k$ further vertices with two distinct endpoints $a_{ij}$ and $b_{ij}$. In Phase~I, insert the edges $r_ia_{ij}$ and $b_{ij}y_j$ for all $i,j$, and, if $M_{ij}=1$, a path from $a_{ij}$ to $b_{ij}$ through all vertices of $P_{ij}$. A triple is \emph{active} if its vertices form a triangle. Inserting $j$ into $X$ inserts the three edges of a triangle on $Y_j$. The query $q$ inserts the three edges of a triangle on $R_q$, and asks whether $\rho^*(G)\ge\theta$, where
+\[
+\theta:=\frac{k+7}{k+6}.
+\]
+The graph has $kn^2+6n=6n^3+6n$ vertices, and isolated vertices pad it without changing $\rho^*(G)$.
+
+\begin{lemma}\label{lem:app-density}
+After the query inserts the triangle on $R_q$, we have $\rho^*(G)\ge\theta$ if and only if $S_q\cap X\ne\emptyset$.
+\end{lemma}
+\begin{proof}
+If $j\in S_q\cap X$, then $R_q\cup P_{qj}\cup Y_j$ has $k+6$ vertices and induces $(k-1)+2+3+3=k+7$ edges, so its density is $\theta$.
+
+Conversely, suppose that $S_q\cap X=\emptyset$, and that some nonempty $U$ has $\Phi(U):=\abs{E(G[U])}-\theta\abs U\ge0$. We modify $U$ in the following steps, each of which strictly increases $\Phi(U)$; in particular, $U$ never becomes empty, since $\Phi(\emptyset)=0$.
+\begin{itemize}[leftmargin=*]
+  \item For each $(i,j)$, remove every component of $G[U\cap P_{ij}]$, unless it is all of $P_{ij}$, $M_{ij}=1$, and $r_i,y_j\in U$. A removed component with $v$ vertices spans at most $v-1$ edges and has at most one edge to $r_i$ or $y_j$, so its removal deletes at most $v$ edges and increases $\Phi(U)$ by at least $(\theta-1)v>0$.
+  \item For each triple, if it is not active, remove its vertices other than its designated vertex; they are isolated. If it is active and its designated vertex is not in $U$, remove its remaining vertices, which span at most one edge. If it is active and its designated vertex is in $U$, add its missing vertices: adding one vertex adds two edges, and adding two vertices adds three edges, so $\Phi(U)$ increases since $\theta<3/2$. These steps do not create new edges to the sets $P_{ij}$, since only designated vertices have such edges.
+\end{itemize}
+Now let $\pi$ be the number of sets $P_{ij}\subseteq U$, $\tau$ the number of active triples contained in $U$, and $\delta$ the number of designated vertices of inactive triples in $U$. Then $G[U]$ has $v=k\pi+3\tau+\delta$ vertices and $e=(k+1)\pi+3\tau$ edges. The only active triple $R_i$ is $R_q$, and the triples $Y_j$ with $j\in S_q$ are inactive, since $S_q\cap X=\emptyset$; so each $P_{ij}\subseteq U$ has an endpoint adjacent to the designated vertex of an inactive triple in $U$. Every designated vertex is adjacent to at most $n$ of the sets $P_{ij}$, so $\pi\le n\delta$. Moreover $\tau+\delta>0$, since $U$ is nonempty and every $P_{ij}\subseteq U$ comes with $r_i,y_j\in U$. Using $k=6n$,
+\[
+(k+7)v-(k+6)e=3\tau+(k+7)\delta-6\pi\ge3\tau+7\delta>0,
+\]
+so $e/v<\theta$, which contradicts $\Phi(U)\ge0$.
+\end{proof}
+
+Each insertion into $X$ is three updates, and the query is three updates and one query, so \cref{lem:app-transfer} gives $t_u+t_q=\Omega(\mathcal L_N)$. The numerator and denominator of $\theta$ have $O(\log n)$ bits. The bound concerns exact densities: $\theta$ tends to $1$, so it does not extend to constant-factor approximation.
+
+\subsubsection{Nearest marked vertex}\label{sec:app-marked-distance}
+
+The graph is fixed, undirected and unweighted, and every vertex is marked or unmarked. An update marks a vertex, and a query asks for the distance $d(v)$ from a given vertex $v$ to the nearest marked vertex, or for a one-sided approximation $\widehat d(v)$ with $d(v)\le\widehat d(v)\le\alpha\,d(v)$, where $1\le\alpha<3$. We adapt the incidence-graph construction of Henzinger et al.~\cite[Lemma~3.7]{henzinger_unifying_2015} to marking only, adding a sentinel and hubs so that the graph is connected and all distances are finite.
+
+The graph has vertices $r_1,\dots,r_n$, $v_1,\dots,v_n$, $a$, $b$ and $z$, and the edges $r_iv_j$ for $j\in S_i$, and $r_ia$, $ab$, $bz$ and $bv_j$ for all $i$ and $j$. It is connected and bipartite, with sides $\{r_1,\dots,r_n,b\}$ and $\{v_1,\dots,v_n,a,z\}$. Initially only $z$ is marked. Inserting $j$ into $X$ marks $v_j$, and the query $q$ asks for $d(r_q)$.
+
+The marked vertices are $z$ and the $v_j$ with $j\in X$. So $r_q$ has a marked neighbor, and $d(r_q)=1$, exactly when $S_q\cap X\ne\emptyset$. Otherwise all marked vertices lie on the other side of the bipartition and are not adjacent to $r_q$, so their distance from $r_q$ is odd and at least $3$, and the path $r_q,a,b,z$ shows that $d(r_q)=3$. So the test $\widehat d(r_q)<3$ tells the two cases apart. The graph has $2n+3$ vertices, and unmarked leaves attached to $b$ pad it without changing these distances. The costs are one update per insertion and one query, so \cref{lem:app-transfer} gives $t_q=\Omega(\mathcal L_N)$.
+
+% =====================================================================
+\subsection{Planar graph problems}\label{sec:planar}
+% =====================================================================
+
+Here $N$ is the number of vertices, an update inserts an edge, and every graph that arises is planar. The reductions adapt the two-grid construction of Abboud and Dahlgaard~\cite[Definition~1, Corollary~1, and Sections~3 and~6]{abboud_popular_2016} and their selectors for diameter and girth. We add a permanent dummy connection and choose positive connector lengths, so that all updates are insertions. A local shortcut first encodes one matrix entry in a grid distance; a second grid and the connectors turn these entry tests into an OR over the inserted elements.
+
+\paragraph{The grid.}
+For a Boolean $p\times p$ matrix $B$ with $p\ge2$, the grid $G(B)$ has vertices $u_{rc}$, $v_{rc}$, $w_{rc}$ and $x_{rc}$ for $r,c\in[p]$, top terminals $a_c$, right terminals $b_r$, and the following edges.
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Edge & Length\\
+\midrule
+$a_cv_{1c}$, and $u_{r-1,c}v_{rc}$ for $r>1$ & $2c-1$\\
+$v_{rc}u_{rc}$ & $1$\\
+$u_{rc}w_{rc}$ & $2$\\
+$w_{rc}u_{r,c+1}$ for $c<p$, and $w_{rp}b_r$ & $2p-2$\\
+$v_{rc}x_{rc}$ & $1$\\
+$x_{rc}w_{rc}$, present exactly when $B_{rc}=1$ & $1$\\
+\bottomrule
+\end{tabular}
+\end{center}
+When $B_{rc}=0$, the vertex $x_{rc}$ is a leaf, which does not affect distances between terminals; so $G(B)$ has $4p^2+2p$ vertices for every $B$.
+
+\begin{lemma}[Grid distances]\label{lem:planar-grid-distance}
+For every Boolean $p\times p$ matrix $B$ with $p\ge2$ and all $q,j\in[p]$,
+\[
+ d_{G(B)}(a_q,b_j)=2p(p-q+1)+2qj-B_{jq},
+\]
+which is attained by the path down column $q$ and then right along row $j$, through $x_{jq}$ if $B_{jq}=1$.
+\end{lemma}
+\begin{proof}
+\emph{Compressing each cell.} Identify each vertex $u_{rc}$ with the corner $(r,c)$, the top terminal $a_c$ with $(0,c)$, and the right terminal $b_r$ with $(r,p+1)$. The cell $\{v_{rc},w_{rc},x_{rc}\}$ meets the rest of the graph only at the three corners $(r-1,c)$, $(r,c)$ and $(r,c+1)$. Within the cell, the distances from $(r-1,c)$ to $(r,c)$, from $(r,c)$ to $(r,c+1)$, and from $(r-1,c)$ to $(r,c+1)$ are $2c$, $2p$ and $2c+2p-B_{rc}$: the edge $x_{rc}w_{rc}$ saves one unit only between the first and third corners. Replace the cell by the triangle on its three corners with these edge lengths. Since the cells are disjoint, this preserves all distances between corners. The compressed graph has a vertical, a horizontal and a diagonal edge for every $r,c\in[p]$, and no horizontal edges on row $0$.
+
+\smallskip\noindent\emph{A lower-bound potential.} Fix $q,j$, and let $\beta:=B_{jq}$ and $z_r:=\max\{j-r,0\}$. Define
+\[
+ F(r,c):=2qj+2p(c-q)-2\min\{c,q\}z_r+\eta(r,c),
+ \qquad
+ \eta(r,c):=
+ \begin{cases}
+  1,&r<j,\ c<q,\\
+  -1,&r<j,\ c>q,\\
+  -\beta,&r\ge j,\ c>q,\\
+  0,&\text{otherwise}.
+ \end{cases}
+\]
+Let $V_{rc}:=F(r,c)-F(r-1,c)$, $H_{rc}:=F(r,c+1)-F(r,c)$ and $D_{rc}:=V_{rc}+H_{rc}$ be the increments along the vertical, horizontal and diagonal edges. Direct subtraction gives $0\le V_{rc}\le2c$ and $0\le H_{rc}\le2p$; for the lower bound on $H_{rc}$, use $r\ge1$, so that $z_r\le p-1$ and the smallest possible value is $2p-2z_r-1\ge1$. The diagonal increments are as follows, with an upper bound in the top-left entry and equality elsewhere:
+\[
+\begin{array}{c|ccc}
+ &c<q&c=q&c>q\\\hline
+ r<j&\le2p+2c-2&2p+2q-1&2p+2q\\
+ r=j&2p+2c-1&2p+2q-\beta&2p+2q+1-\beta\\
+ r>j&2p&2p-\beta&2p
+\end{array}
+\]
+So $0\le D_{rc}\le2p+2c-1$ for $(r,c)\ne(j,q)$, and $D_{jq}=2p+2q-\beta$. Since $B$ is Boolean, every diagonal increment is at most the length $2p+2c-B_{rc}$ of its edge. Hence the potential changes by at most the length of each compressed edge, in either direction.
+
+\smallskip\noindent\emph{Attaining the bound.} Since $F(0,q)=0$ and $F(j,p+1)=2qj+2p(p-q+1)-\beta$, every path from $a_q$ to $b_j$ has at least the claimed length. The path consisting of $j-1$ vertical edges in column $q$, the diagonal edge of cell $(j,q)$, and $p-q$ horizontal edges in row $j$ has exactly this length, and expanding its edges gives the stated path.
+\end{proof}
+
+\paragraph{The core.}
+Let $p:=n+1$, pad $M$ with a zero row and a zero column, and let $B:=M^{\mathsf T}$; so the rows of $B$ are indexed by elements and its columns by sets, and row $p$ of $B$ is zero. To the right of $G(B)$, place a horizontally reflected copy of $G(0)$, with terminals $b'_1,\dots,b'_p$ facing $b_1,\dots,b_p$ and top terminals $a'_1,\dots,a'_p$, and let $r_q:=a'_{p-q+1}$. By \cref{lem:planar-grid-distance}, applied to $G(0)$, the distance from $b'_j$ to $r_q$ in the copy is $2pq+2(p-q+1)j$. Let
+\[
+ H:=4p(p+1),\qquad \lambda_j:=H+2(p+1)(p-j),\qquad D:=2H.
+\]
+For $j\in[p]$, the \emph{connector} of $j$ is an edge $b_jb'_j$ of length $\lambda_j$; the connectors join facing terminals, so they do not cross. The connector of $p$ is present from the start, and the connector of $j\in[n]$ is inserted when $j$ is inserted into $X$. The core has $8p^2+4p$ vertices, and every edge length is at most $\lambda_1=6p^2+4p-2<D$.
+
+A path from $a_q$ to $r_q$ that uses the connector of $j$ once, and shortest paths in the two grids (\cref{fig:planar-core}), has length
+\[
+ \bigl(2p(p-q+1)+2qj-B_{jq}\bigr)+\lambda_j+\bigl(2pq+2(p-q+1)j\bigr)=D-B_{jq}.
+\]
+A path from one grid to the other uses an odd number of connectors, and a path that uses at least three of them has length at least $3H>D$, while the connector of $p$ gives a path of length $D$. Hence
+\begin{equation}\label{eq:planar-bit-distance}
+ d(a_q,r_q)=D-f_q,\qquad\text{where}\qquad f_q:=\max_{j\in X\cup\{p\}}B_{jq}=\mathbf 1_{S_q\cap X\ne\emptyset}.
+\end{equation}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[x=0.9cm,y=0.65cm,font=\small,
+  route/.style={very thick,blue!65!black},
+  terminal/.style={circle,fill=black,inner sep=1.4pt}]
+  \foreach \c in {1,...,4} {
+    \draw[gray!65] (\c,0)--(\c,-4);
+    \draw[gray!65] (\c+8,0)--(\c+8,-4);
+  }
+  \foreach \r in {1,...,4} {
+    \draw[gray!65] (1,-\r)--(5,-\r);
+    \draw[gray!65] (8,-\r)--(12,-\r);
+    \node[terminal] at (5,-\r) {};
+    \node[terminal] at (8,-\r) {};
+  }
+  \draw (5,-1)--(8,-1);
+  \draw[gray!65,dashed] (5,-2)--(8,-2);
+  \draw (5,-4)--(8,-4);
+  \draw[route] (2,0)--(2,-2)--(3,-3)--(5,-3)--(8,-3)--(10,-3)--(10,0);
+  \node[terminal,label=above:{$a_q$}] at (2,0) {};
+  \node[terminal,label=above:{$r_q$}] at (10,0) {};
+  \node at (3,0.95) {$G(B)$};
+  \node at (10,0.95) {reflected $G(0)$};
+  \node[above] at (5,-3) {$b_j$};
+  \node[above] at (8,-3) {$b'_j$};
+  \node[above] at (6.5,-3) {$\lambda_j$};
+  \node[below] at (6.5,-4) {dummy connector};
+  \node[left] at (2.5,-2.5) {$B_{jq}$};
+\end{tikzpicture}
+\caption{The planar core, with cell interiors suppressed ($p=4$, $q=2$, $X=\{1,3\}$). The highlighted path uses the cell $(j,q)$ and the connector of $j=3$; its length is $D-B_{jq}$. The second grid and connector length cancel the dependence on $j$. Solid connectors are present; the dashed connector is absent. The dummy connector guarantees distance at most $D$.}
+\label{fig:planar-core}
+\end{figure}
+
+\subsubsection{Distance}\label{sec:planar-distance}
+
+A query asks for the distance between two vertices. The query $q$ asks for $d(a_q,r_q)$, which by~\eqref{eq:planar-bit-distance} is at most $D-1$ exactly when $S_q\cap X\ne\emptyset$; so the bound holds already for this threshold query.
+
+For unit weights, subdivide every edge of the two grids into edges of length $1$, and replace the connector of $j$ by a path of length $\lambda_j$ from $b_j$ to $b'_j$. The path of $p$ is present from the start, and the path of $j\in[n]$ is present from the start except for its edge at $b_j$, which is inserted when $j$ is inserted into $X$. The incomplete paths hang from the right grid, so the graph stays connected, and~\eqref{eq:planar-bit-distance} still holds. Subdividing a grid adds its total edge length $3p^3+2p^2+\sum_{r,c}B_{rc}$, minus its number of edges $5p^2+\sum_{r,c}B_{rc}$, to its $4p^2+2p$ vertices, giving $3p^3+p^2+2p$ vertices; the connector paths add $\sum_j(\lambda_j-1)=5p^3+4p^2-2p$ vertices. So the graph has $11p^3+6p^2+2p$ vertices, for every $B$.
+
+In both versions, pendant leaves pad the graph, each insertion into $X$ is one update, and the query is one query, so \cref{lem:app-transfer} gives $t_q=\Omega(\mathcal L_N)$.
+
+\subsubsection{Directed girth}\label{sec:planar-girth}
+
+A query asks for the length of a shortest directed cycle. As in \cite[Section~6]{abboud_popular_2016}, direct the horizontal grid edges to the right, the vertical edges of the left grid downwards and those of the right grid upwards, each path $v_{rc}x_{rc}w_{rc}$ from $v_{rc}$ to $w_{rc}$, the remaining leaf edges away from the grids, and each connector from $b_j$ to $b'_j$. Then both grids are acyclic, and all connectors go from the left grid to the right one, so the core is acyclic. The paths that attain the distances of \cref{lem:planar-grid-distance} in the two grids respect these directions, and directing the edges cannot shorten paths, so the directed distance from $a_q$ to $r_q$ is still $D-f_q$.
+
+The query $q$ inserts an edge of length $1$ from $r_q$ to $a_q$, which can be drawn in the outer face, and asks for the girth $g$. Every cycle uses this edge, so $g=D+1-f_q$, and $g\le D$ exactly when $S_q\cap X\ne\emptyset$. This holds for positive weights and, after the subdivision of \cref{sec:planar-distance}, with each path directed like the edge it replaces, for unit weights. Directed leaves pad the graph. Each insertion into $X$ is one update, and the query is one update and one query, so \cref{lem:app-transfer} gives $t_u+t_q=\Omega(\mathcal L_N)$.
+
+\subsubsection{Diameter}\label{sec:planar-diameter}
+
+The graph is connected and has positive integer weights, and a query asks for the largest distance between two vertices. We add to the undirected core the selectors of \cite[Section~6]{abboud_popular_2016}, with permanent fallback edges that keep the graph connected. Let $L:=64p^3$. For each $c\in[p]$, add vertices $z_c$ and $z'_c$ with edges $z_ca_c$ and $z'_cr_c$ of length $1$, and add vertices $s$ and $t$ with edges $sz_c$ and $tz'_c$ of length $3L$. These two fans lie in the outer face, next to the two grids, and the edges $sa_c$ and $tr_c$ that a query may insert can be drawn next to the paths $sz_ca_c$ and $tz'_cr_c$; so the graph stays planar. It has $8p^2+6p+2$ vertices. Let $C$ be the graph without $s$ and $t$. Even with all connectors present, the total edge length of $C$ is at most $11p^3+9p^2+p<16p^3$. To pad, attach leaves to $C$; fewer than $16p+14$ are needed between consecutive values of $p$, so the total edge length of $C$ stays below $L/2$, and any two vertices of $C$ are at distance less than $L/2$.
+
+The query $q$ inserts the edges $sa_q$ and $tr_q$, of length $L$ each, and asks for the diameter. A path between two vertices of $C$ through $s$ or $t$ has length at least $2L$, so it does not shorten their distance in $C$. A path from $s$ to $t$ that uses an edge $sz_c$ or $tz'_c$ has length at least $4L$, while the two new edges give a path of length at most $2L+D<3L$; so
+\[
+ d(s,t)=2L+d_C(a_q,r_q)=2L+D-f_q.
+\]
+Every other distance is less than $2L$: it is less than $L/2$ within $C$, and less than $L+L/2$ between $s$ or $t$ and a vertex of $C$. So the diameter is $2L+D-f_q$, which is at most $2L+D-1$ exactly when $S_q\cap X\ne\emptyset$. The largest weight is $3L=O(n^3)$; we do not subdivide the selector edges, which would change the diameter. Each insertion into $X$ is one update, and the query is two updates and one query, so \cref{lem:app-transfer} gives $t_u+t_q=\Omega(\mathcal L_N)$.
+
+\subsubsection{Maximum-weight bipartite matching}\label{sec:planar-matching}
+
+The graph is bipartite and has positive integer weights, and a query asks for the maximum weight of a matching. We adapt the vertex-splitting and weight-complement construction of Abboud and Dahlgaard~\cite[Section~4]{abboud_popular_2016} to the directed core of \cref{sec:planar-girth}, without the edge from $r_q$ to $a_q$. Let $N_{\mathrm{core}}:=8p^2+4p$ be the number of vertices of the core, and let $K:=D+1$. Replace each vertex $v$ of the core by two vertices $v^{\mathrm{in}}$ and $v^{\mathrm{out}}$, joined by an edge of weight $K$, and each directed edge from $u$ to $v$ of length $\ell$ by an edge $u^{\mathrm{out}}v^{\mathrm{in}}$ of weight $K-\ell$, which is positive since $\ell<D$. The graph is bipartite, with the vertices $v^{\mathrm{out}}$ on one side and the vertices $v^{\mathrm{in}}$ on the other. At each vertex of the core, the incoming and the outgoing edges occupy two contiguous sectors: in the left grid, the incoming edges come from the north and west and the outgoing edges leave to the south and east, and analogously in the right grid. So splitting the vertices preserves planarity, as in~\cite{abboud_popular_2016}. Add a vertex $\sigma$ on the side of the vertices $v^{\mathrm{out}}$ and a vertex $\tau$ on the other side, isolated in Phases~I and~II. Inserting $j$ into $X$ inserts the edge that replaces the connector of $j$. The query $q$ inserts the edges $\sigma a_q^{\mathrm{in}}$ and $r_q^{\mathrm{out}}\tau$, of weight $K$ each, which can be drawn in the outer face, and asks for the maximum weight of a matching.
+
+Compare a perfect matching with the matching that consists of the $N_{\mathrm{core}}$ edges $v^{\mathrm{in}}v^{\mathrm{out}}$. Their symmetric difference consists of an alternating path from $\sigma$ to $\tau$, which corresponds to a directed path from $a_q$ to $r_q$ in the core, and of alternating cycles, which would correspond to directed cycles and hence do not exist. Conversely, every directed path from $a_q$ to $r_q$ gives a perfect matching in this way, and if the path has length $d$, then the perfect matching has weight $(N_{\mathrm{core}}+1)K-d$. Since $d(a_q,r_q)\le D$, some perfect matching has weight at least $(N_{\mathrm{core}}+1)K-D=N_{\mathrm{core}}K+1$, while a matching that is not perfect has at most $N_{\mathrm{core}}$ edges, each of weight at most $K$. So the maximum weight of a matching is
+\[
+ (N_{\mathrm{core}}+1)K-(D-f_q)=N_{\mathrm{core}}K+1+f_q,
+\]
+which is at least $N_{\mathrm{core}}K+2$ exactly when $S_q\cap X\ne\emptyset$. The graph has $2N_{\mathrm{core}}+2$ vertices and weights $O(n^2)$, and isolated vertices pad it. Each insertion into $X$ is one update, and the query is two updates and one query, so \cref{lem:app-transfer} gives $t_u+t_q=\Omega(\mathcal L_N)$.
+
+% =====================================================================
+\subsection{Set and array problems}\label{sec:other-problems}
+% =====================================================================
+
+\Patrascu~\cite{patrascu_mihai_towards_2010} reduced the multiphase problem to Langerman's, Pagh's and Erickson's problems, and Chan et al.~\cite{chan_linear-space_2014} reduced it to range mode. For set disjointness and Pagh's problem, $N$ is the size of the universe, and the instances have $O(N)$ sets; for the other problems, $N$ bounds the number of array or matrix entries, and the constructions use $\Theta(n^2)$ entries.
+
+\subsubsection{Set disjointness}\label{sec:set-disjointness}
+
+A family of subsets of $[N]$ is maintained under insertions of elements into its sets, and a query asks whether two sets of the family are disjoint \cite{kopelowitz_dynamic_2015}. This problem contains multiphase Disjointness directly: the family consists of $S_1,\dots,S_m$ and $X$, inserting an element into $X$ is an update, and the query $q$ asks whether $S_q$ and $X$ are disjoint.
+
+\subsubsection{Langerman's problem}\label{sec:langerman}
+
+An array of integers is maintained under updates that assign a value to an entry, and a query asks whether some nonempty prefix has sum zero. The reduction is \Patrascu's~\cite[Appendix~A]{patrascu_mihai_towards_2010}. The array consists of $A[1]$, initially $1$, followed by a block for each $j\in[n]$: a head $h_j$, then a pair $(a_{j,i},b_{j,i})$ for each $i\in[m]$, and then a tail $t_j$. In Phase~I, set $(a_{j,i},b_{j,i}):=(1,1)$ if $j\in S_i$ and $(2,0)$ otherwise, and $(h_j,t_j):=(0,-2m)$. Inserting $j$ into $X$ sets $(h_j,t_j):=(-2m,0)$. The query $q$ sets $A[1]:=2(m-q)+1$, and asks whether some prefix sum is zero.
+
+Every block sums to zero, so a prefix that ends at $A[1]$ or at a tail has sum $A[1]>0$. A prefix that ends at the head or at a pair entry of block $j$ has sum $A[1]+h_j+y$, where $y\in[0,2m]$ is the sum of the pair entries of block $j$ in the prefix; $y$ is even, or $y=2i-1$ for some $i$ with $j\in S_i$. If $j\notin X$, then $h_j=0$, and this sum is positive. If $j\in X$, then it equals $y-(2q-1)$, which is zero exactly when $y=2q-1$, and block $j$ has such a prefix exactly when $j\in S_q$. So some prefix sum is zero exactly when $S_q\cap X\ne\emptyset$.
+
+\subsubsection{Pagh's problem}\label{sec:pagh}
+
+A family of subsets of a universe is maintained under updates that add the intersection of two sets of the family to the family, and a query asks whether a given element belongs to a given set of the family. The reduction is \Patrascu's~\cite[Appendix~A]{patrascu_mihai_towards_2010}, with the universe added to the initial family to handle $X=\emptyset$. The universe is $[m]$, and the initial family consists of $Y_0:=[m]$ and $Y_j:=\{i\in[m]:j\notin S_i\}$ for $j\in[n]$. We keep the index of a current set $C$, initially $Y_0$. Inserting $j$ into $X$ adds $C\cap Y_j$ to the family and makes it the current set. Then $C=\{i\in[m]:S_i\cap X=\emptyset\}$, so the query $q$ asks whether $q\in C$.
+
+\subsubsection{Erickson's problem}\label{sec:erickson}
+
+A matrix of integers is maintained under updates that increment all entries of a row or of a column, and a query asks for the largest entry. The reduction is \Patrascu's~\cite[Section~1.2, proof of Theorem~2]{patrascu_mihai_towards_2010}. Initially the matrix is $(M_{ij})_{i\in[m],j\in[n]}$. Inserting $j$ into $X$ increments column $j$, and the query $q$ increments row $q$ and asks for the largest entry. The entry in row $i$ and column $j$ is then $M_{ij}+x_j+\mathbf 1_{i=q}$, so the largest entry is $3$ exactly when $S_q\cap X\ne\emptyset$. A quadratic-logarithmic lower bound for a counting version of this problem, whose query asks for the parity of the number of largest entries, is proved in~\cite[Corollary~1.2]{ko_omega_2026}.
+
+\subsubsection{Range mode}\label{sec:range-mode}
+
+An array is maintained under updates that assign a value to an entry, and a query asks for a mode, that is, a most frequent value, of a given subarray. We adapt the reduction of Chan et al.~\cite[Section~9.2]{chan_linear-space_2014}, using a returned mode instead of its frequency. The array consists of $m+1$ chunks of $n$ entries each. In Phase~I, chunk $i\in[m]$ lists the elements of $[n]\setminus S_i$ followed by those of $S_i$, and the last chunk consists of zeros; we also store the sizes $\abs{S_i}$ and the entries $M_{ij}$. When $j$ is inserted into $X$ as its $k$-th element, set $A[mn+k]:=j$; we also keep $\abs X$. If $S_q=\emptyset$, the query $q$ answers ``disjoint''. Otherwise it asks for a mode $z$ of $A[qn-\abs{S_q}+1:mn+\abs X]$, and answers ``disjoint'' exactly when $z\notin S_q\cap X$.
+
+The queried subarray consists of the elements of $S_q$, then $m-q$ chunks that are each a permutation of $[n]$, and then the elements of $X$. So each $j\in[n]$ occurs $(m-q)+M_{qj}+x_j$ times in it, and no other value occurs. If $S_q\cap X\ne\emptyset$, the modes are exactly the elements of $S_q\cap X$, each with $m-q+2$ occurrences. So $z\in S_q\cap X$ exactly when $S_q\cap X\ne\emptyset$.
+
+\paragraph{Costs.}
+Each insertion into $X$ is at most two updates. The query is one query for set disjointness, Pagh's problem and range mode, and one update and one query for Langerman's and Erickson's problems. So \cref{lem:app-transfer} gives $t_q=\Omega(\mathcal L_N)$ for the former three problems, and $t_u+t_q=\Omega(\mathcal L_N)$ for the latter two.
+
+% =====================================================================
+\subsection{Matrix problems}\label{sec:app-matrices}
+% =====================================================================
+
+Here $N$ is the dimension of a matrix over a prime field, which is maintained under updates that change a single entry. The reductions specialize van den Brand et al.~\cite[Theorems~C.1 and~C.3]{van_den_brand_dynamic_2019}; our choice of the field prevents cancellation and keeps the matrices nonsingular. We work over $\mathbb F_p$ for a prime $p>n+1$ with $p=\Theta(n)$, so that field elements occupy $\Theta(\log n)$ bits. Let $d:=2n+1$, and for $x=(x_j)_{j\in[n]}$, let
+\[
+A(x):=\begin{pmatrix}
+I_n&M&0\\
+0&I_n&x\\
+0&0&1
+\end{pmatrix},
+\qquad\text{so that}\qquad
+A(x)^{-1}=\begin{pmatrix}
+I_n&-M&Mx\\
+0&I_n&-x\\
+0&0&1
+\end{pmatrix}.
+\]
+In Phase~I, the matrix is $A(0)$, and inserting $j$ into $X$ changes the entry $(n+j,d)$ from $0$ to $1$. So the matrix is always $A(x)$, which has entries in $\{0,1\}$ and is unit upper triangular.
+
+\paragraph{Field size.}
+The bounds below hold for every family of prime fields with $p=\Theta(N)$: take the largest $n$ with $2n+1\le N$ and $n+2\le p$, which is $\Theta(N)$, and pad the matrix to dimension $N$ by a direct sum with an identity matrix. This preserves the queried entries of the inverse, the determinant, and nonsingularity.
+
+\subsubsection{Inverse-entry zero testing}\label{sec:app-inverse}
+
+The matrix is always nonsingular, and a query asks whether a given entry of its inverse is zero. The query $q$ asks whether the entry $(q,d)$ of $A(x)^{-1}$ is zero. This entry is $c_q\in[0,n]$, which is zero in $\mathbb F_p$ exactly when $c_q=0$, since $p>n$. The costs are one update per insertion and one query, so \cref{lem:app-transfer} gives $t_q=\Omega(\mathcal L_N)$, also for queries that return the entry itself.
+
+\subsubsection{Determinant}\label{sec:app-determinant}
+
+A query asks for the determinant, or whether it equals one. As in~\cite[Equation~(11)]{van_den_brand_dynamic_2019}, the query $q$ changes the entry $(d,q)$ from $0$ to $1$, and asks for the determinant of the resulting matrix $A(x)+e_de_q^{\mathsf T}$. By the matrix determinant lemma $\det(A+uv^{\mathsf T})=\det(A)\,(1+v^{\mathsf T}A^{-1}u)$, which follows by factoring out $A$ and expanding $\det(I+A^{-1}uv^{\mathsf T})$,
+\[
+\det\big(A(x)+e_de_q^{\mathsf T}\big)=1+\big(A(x)^{-1}\big)_{q,d}=1+c_q.
+\]
+Since $1\le1+c_q\le n+1<p$, the matrix is nonsingular, and its determinant is one exactly when $c_q=0$. Each insertion into $X$ is one update, and the query is one update and one query, so \cref{lem:app-transfer} gives $t_u+t_q=\Omega(\mathcal L_N)$. Testing whether the determinant is zero does not tell the two cases apart.
+
+% =====================================================================
+\subsection{Geometric problems}\label{sec:geometric-counting}
+% =====================================================================
+
+Here $N$ bounds the number of points, which are inserted one at a time, and all coordinates are integers of $O(\log N)$ bits. Each construction has $O(n^2)$ points, so we take $n=\Theta(\sqrt N)$.
+
+\subsubsection{Convex-hull vertex counting}\label{sec:hull}
+
+A query asks for the number of vertices of the convex hull of the current points in $\mathbb R^3$. The construction is that of Dallant and Iacono~\cite[ESA version, Section~3, Theorem~10 and Lemma~11]{dallant_conditional_2022}. Their fully dynamic version deletes the blockers of a supplied set $J$; as in their incremental version, we start without blockers and insert the blockers of the elements of $X$, so that $J=[n]\setminus X$. The points lie on $n$ columns, one for each element. A blocker hides its column, and a selector hides all levels above a cutoff, so two consecutive selectors isolate the surviving points of row $q$. Let $n\ge5$, and let
+\[
+ H:=2n+1,\qquad R:=4n^4,\qquad
+ e_j:=(\cos(2\pi j/n),\sin(2\pi j/n)),\qquad
+ v_j(h):=((R-h^2)e_j,h).
+\]
+In Phase~I, insert the points
+\[
+ g_{i,j}:=v_j(2i+1)\quad(0\le i\le n,\ j\in[n]),
+ \qquad
+ p_{i,j}:=v_j(2i)\quad(i\in[n],\ j\in S_i).
+\]
+The points that may be inserted later are the blockers and the selectors
+\[
+ b_j:=((R-1)e_j,H+1)\quad(j\in[n]),\qquad
+ t_a:=(0,0,T_{2a-1})\quad(a\in[n+1]),\qquad
+ \text{where}\quad T_s:=\frac{R+s^2}{2s}.
+\]
+
+\begin{lemma}\label{lem:hull-selector-count}
+Add any set of blockers $b_j$ and any set of selectors $t_a$ to the points inserted in Phase~I, and let $a$ be the least index of an added selector, or $n+2$ if there is none. Then the vertices of the convex hull are exactly
+\begin{itemize}[leftmargin=*]
+  \item the points $g_{0,j}$ and the added blockers;
+  \item the selector $t_a$, if a selector was added;
+  \item the points $g_{i,j}$ and the present points $p_{i,j}$ with $1\le i<a$ whose blocker $b_j$ was not added.
+\end{itemize}
+This classification is unchanged if every point is moved by Euclidean distance at most $1/R^2$. Consequently, all the points can be replaced by integer points with coordinates of absolute value $O(n^{12})$.
+\end{lemma}
+
+\begin{proof}
+Write points as $(x,z)$ with $x\in\mathbb R^2$ and $z\in\mathbb R$. All radii $R-h^2$ with $1\le h\le H$ are positive, $T_s$ decreases for $s\in[1,H]$, and $T_H>H+1$.
+
+\smallskip\noindent\emph{Exposed vertices.} The functional $e_j\cdot x-z$ uniquely exposes $g_{0,j}$, and $e_j\cdot x+z/2$ uniquely exposes an added blocker $b_j$. The highest added selector uniquely maximizes $z$. For a point $v_j(h)$ with $h>1$ below the cutoff whose blocker was not added, use
+\[
+ L_{j,h}(x,z):=e_j\cdot x+(2h-\tfrac12)z.
+\]
+The deficit of another point $v_\ell(h')$ inserted in Phase~I, relative to $v_j(h)$, is
+\[
+ (h'-h)^2+\frac{h'-h}{2}
+ +(R-h'^2)(1-e_j\cdot e_\ell)>0;
+\]
+here $h$ and $h'$ are integers, and equality is possible only for the same point. A blocker in another column also has smaller value: since
+\[
+ 1-\cos(2\pi/n)\ge\frac8{n^2}\qquad\text{and}\qquad R-H^2\ge R/2,
+\]
+its deficit is at least $(R-1)(1-\cos(2\pi/n))-(H+1)^2+1>1$. Every added selector has a parameter $s\ge h$, and its deficit is
+\[
+ (s-h)(R/s-h)+\tfrac12(T_s-h)>0.
+\]
+These calculations also show that every other point is at Euclidean distance at least $1/(10n)$ from the exposing plane of each claimed vertex. For the highest selector, consecutive possible heights differ by more than one, since
+\[
+ T_s-T_{s'}=\frac{(s'-s)(R-ss')}{2ss'}>1
+ \qquad(1\le s<s'\le H,\ s,s'\text{ odd}).
+\]
+
+\smallskip\noindent\emph{Points hidden by a selector.} We show next that every remaining point is strictly interior. If a selector with parameter $s=2a-1$ is present, the cone with apex $t_a$ and base $\operatorname{conv}\{g_{a-1,j}:j\in[n]\}$ contains every point $v_j(h)$ inserted in Phase~I with $h>s$ in its interior. Indeed, its cross-section at height $h$ is the regular polygon with vertices
+\[
+ \bigl((R+s^2-2sh)e_j,h\bigr)
+ =\bigl((R-h^2+(h-s)^2)e_j,h\bigr),
+\]
+and $v_j(h)$ lies strictly between its center and the corresponding vertex. More quantitatively, if $u$ is the outward unit normal of an edge of the base polygon and $c:=\cos(\pi/n)$, the corresponding side face has the equation
+\[
+ u\cdot x+2scz=c(R+s^2).
+\]
+At $v_j(h)$, the slack is at least $c(h-s)^2$, so the distance of $v_j(h)$ from every side face is at least $1/(10n)$, and its distance from the base is at least one. A lower selector is likewise strictly interior to the cone with apex $t_a$ and base $\operatorname{conv}\{g_{0,j}:j\in[n]\}$: its distance from the base is greater than one, and its distance from each side face is greater than $1/2$.
+
+\smallskip\noindent\emph{Points hidden by a blocker.} Suppose that $b_j$ is present. Rotate the coordinates so that $e_j=(1,0)$, and let
+\[
+ c':=\cos(2\pi/n),\qquad d:=(R-H^2)\sin(2\pi/n),\qquad
+ D:=R-1-c'(R-H^2).
+\]
+The tetrahedron with vertices $g_{0,j}$, $b_j$, $g_{n,j-1}$ and $g_{n,j+1}$, with column indices modulo $n$, contains every $v_j(h)$ with $2\le h\le H$ in its interior. To see this, let $\lambda:=(h^2-1)/D$. The barycentric weights of $v_j(h)$ are $\lambda/2$ for each of $g_{n,j-1}$ and $g_{n,j+1}$, and
+\[
+ \frac{h-1-\lambda(H-1)}H
+ \qquad\text{and}\qquad
+ \frac{H+1-h-\lambda}H
+\]
+for $b_j$ and $g_{0,j}$, respectively. All of them are positive, since $D>H^2-1$. Quantitatively, $D\le2R$ and
+\[
+ 1-\frac{H^2-1}{D}
+ =\frac{(1-c')(R-H^2)}D\ge\frac2{n^2},
+\]
+so every weight is at least $3/(4R)$. The absolute value of the determinant of the tetrahedron is $2HDd\ge32R^2/n^2$, while the cross product of the edge vectors of every face has norm at most $12R^2$. So every altitude is at least $8/(3n^2)$, and $v_j(h)$ is at distance at least $2/(Rn^2)>2/R^2$ from every face.
+
+\smallskip\noindent\emph{Rounding.} All the separation and interior margins above exceed $2/R^2$. Moving a point and all vertices of a witnessing hull by at most $1/R^2$ preserves strict separation and strict interior containment, since the support function of the hull changes by at most $1/R^2$ in every unit direction. This proves the perturbation statement. Round every coordinate to the nearest multiple of $1/(2R^2)$, which moves every point by at most $\sqrt3/(4R^2)<1/R^2$, and multiply all coordinates by $2R^2$. The resulting coordinates are integers of absolute value at most $2R^3+1=O(n^{12})$, and scaling preserves the vertex counts. All these coordinates are fixed in Phase~I.
+\end{proof}
+
+Inserting $j$ into $X$ inserts the blocker $b_j$. The query $q$ inserts $t_{q+1}$ and asks for the number $\kappa$ of hull vertices, and then inserts $t_q$ and asks for the number $\kappa'$. By \cref{lem:hull-selector-count},
+\[
+ \kappa=n+\abs X+1+\sum_{i=1}^{q}\bigl(\abs J+\abs{S_i\cap J}\bigr),\qquad
+ \kappa'=n+\abs X+1+\sum_{i=1}^{q-1}\bigl(\abs J+\abs{S_i\cap J}\bigr),
+\]
+so $\abs{S_q\cap X}=\abs{S_q}+\abs J-(\kappa-\kappa')$, which we compute from the stored $\abs{S_q}$ and $\abs X$. There are at most $2n^2+2n+2$ points. Each insertion into $X$ is one update, and the query is two updates and two queries, which do not depend on the answer to the first query; so \cref{lem:app-transfer} gives $t_u+t_q=\Omega(\mathcal L_N)$.
+
+\subsubsection{Maximal-point counting}\label{sec:maxima}
+
+A point is \emph{maximal} if no other point is at least as large in every coordinate, and a query asks for the number of maximal points among the current points in $\mathbb R^3$. Up to the order of the coordinates and of the columns, the construction is the incremental version of the reduction of Dallant and Iacono~\cite[Theorem~14]{dallant_conditional_2022}; Jin and Xu~\cite[Section~5.1, proof of Theorem~1.10]{jin_tight_2022} use the same structure, with $k=2$ and infinitesimal coordinates, for a stronger conditional bound. In Phase~I, insert the points
+\[
+ p_{i,j}:=(4nj-i,\ n-j,\ i)\qquad(i\in[n],\ j\in S_i).
+\]
+Inserting $j$ into $X$ inserts the blocker $b_j:=(4nj,\ n-j,\ n+1)$, and for $0\le r\le n$, let $t_r:=(4n(n+1),\ n+1,\ r)$. The query $q$ inserts $t_{q-1}$ and asks for the number $\kappa$ of maximal points, and then inserts $t_q$ and asks for the number $\kappa'$.
+
+The points $p_{i,j}$ are pairwise incomparable: if $p_{i',j'}$ dominates $p_{i,j}$, then the second coordinate forces $j'\le j$, and the first forces $j'\ge j$, since $\abs{i-i'}<4n$; so $j'=j$, and then the first and third coordinates force $i'=i$. The blocker $b_j$ dominates exactly the points $p_{i,j}$ in column $j$: the second coordinate forces their column to be at least $j$, and the first forces it to be at most $j$. The blockers are pairwise incomparable; their third coordinate prevents the selectors and the points $p_{i,j}$ from dominating them, and their first coordinate prevents them from dominating the selectors. Finally, $t_r$ dominates exactly the points $p_{i,j}$ with $i\le r$, and $t_q$ dominates $t_{q-1}$. Hence
+\[
+ \kappa=\abs X+1+\sum_{i=q}^{n}\abs{S_i\setminus X},\qquad
+ \kappa'=\abs X+1+\sum_{i=q+1}^{n}\abs{S_i\setminus X},
+\]
+so $\kappa-\kappa'=\abs{S_q\setminus X}$, and $S_q\cap X=\emptyset$ exactly when $\kappa-\kappa'=\abs{S_q}$. There are at most $n^2+n+2$ points, with coordinates of absolute value $O(n^2)$. Each insertion into $X$ is one update, and the query is two updates and two queries, which do not depend on the answer to the first query; so \cref{lem:app-transfer} gives $t_u+t_q=\Omega(\mathcal L_N)$.
+
+\subsubsection{Distinct-color counting}\label{sec:distinct-color-counting}
+
+Colored points in the plane are inserted, and a query asks for the number of distinct colors among the points in a given axis-parallel rectangle. The reduction specializes the construction of Jin and Xu~\cite[Section~3.4, proof of Theorem~1.8]{jin_tight_2022} to one family of sets and one inserted set; we use dominance queries and recover the intersection by inclusion--exclusion. Let $W:=4n+4$. In Phase~I, insert the point $(Wi+j,\,W(n+1-i))$ with color $j$ for each $i\in[n]$ and $j\in S_i$. Inserting $j$ into $X$ inserts the point $(j,0)$ with color $j$; we keep $\abs X$. The query $q$ asks for the number $C_q$ of colors in $[0,Wq+n]\times[0,W(n+1-q)]$.
+
+The bound on the second coordinate excludes the points of rows $i<q$, and the bound on the first coordinate excludes those of rows $i>q$, since $W(q+1)+1>Wq+n$. So the rectangle contains exactly the points of row $q$ and the inserted points, whose colors form $S_q\cup X$, and $\abs{S_q\cap X}=\abs{S_q}+\abs X-C_q$. All coordinates are nonnegative, so the rectangle is a dominance range. There are at most $n^2+n$ points, with coordinates $O(n^2)$; to keep $\Theta(n^2)$ points at all times, add points of a new color to the right of all queried rectangles. The costs are one update per insertion and one query, so \cref{lem:app-transfer} gives $t_q=\Omega(\mathcal L_N)$.
+
+% =====================================================================
+\subsection{String problems}\label{sec:strings}
+% =====================================================================
+
+Here $N$ bounds the total length of the texts and patterns. All constructions have size $\Theta(n^2)$, so we take $n=\Theta(\sqrt N)$.
+
+\subsubsection{Internal dictionary matching}\label{sec:internal-dictionary}
+
+A text $T$ is fixed. Patterns, each given by the endpoints of an occurrence in $T$, are inserted into a dictionary that is initially empty, and a query $\mathsf{Exists}(\ell,r)$ asks whether some pattern of the dictionary occurs in $T[\ell:r]$. The reduction is from Charalampopoulos et al.~\cite[Theorem~24]{charalampopoulos_internal_2019}, with a suffix added to $T$ so that every pattern occurs in $T$. Over the alphabet $\{0,1,\dots,n\}$, the text consists of the blocks $T[(i-1)n+1:in]$ for $i\in[n]$, where $T[(i-1)n+j]:=j$ if $j\in S_i$ and $T[(i-1)n+j]:=0$ otherwise, followed by the suffix $1\,2\cdots n$; so $\abs T=n^2+n$. Inserting $j$ into $X$ inserts the one-symbol pattern $j$, given by its occurrence at position $n^2+j$. The query $q$ asks $\mathsf{Exists}((q-1)n+1,qn)$. The block of $q$ contains the symbol $j\in[n]$ exactly when $j\in S_q$, the dictionary contains it exactly when $j\in X$, and the symbol $0$ is never in the dictionary; so the answer is yes exactly when $S_q\cap X\ne\emptyset$. The costs are one update per insertion and one query, so \cref{lem:app-transfer} gives $t_q=\Omega(\mathcal L_N)$.
+
+\subsubsection{Hamming-distance threshold}\label{sec:hamming-threshold}
+
+A binary text $T$ is fixed, and a binary pattern $P$ is maintained under updates that change one of its bits. A query asks whether the Hamming distance between $P$ and the substring of $T$ of length $\abs P$ that starts at a given position is at most $k$, for a threshold $k$ fixed in advance. The reduction combines the construction of Clifford et al.~\cite[Theorem~15]{clifford_upper_2018}, which concatenates the rows of the matrix, with their binary encoding~\cite[Lemma~11]{clifford_upper_2018}. Let $L:=n^2$. Before the encoding, let $T_0$ be the concatenation of the rows $M_{i1}\cdots M_{in}$ for $i\in[n]$, followed by $0^L$, and let $P_0:=x_1\cdots x_n0^{L-n}$; so $\abs{T_0}=2L$ and $\abs{P_0}=L$. Encode the symbols of the pattern and of the text by
+\[
+f(0):=010,\qquad f(1):=111,
+\qquad\text{and}\qquad
+g(0):=100,\qquad g(1):=111,
+\]
+respectively, and let $P:=f(P_0)$ and $T:=g(T_0)$. For all $a,b\in\{0,1\}$, the Hamming distance between $f(a)$ and $g(b)$ is $2-2ab$. Initially $x=0^n$, and inserting $j$ into $X$ changes the codeword of $x_j$ from $010$ to $111$, by two updates. The query $q$ compares $P$ with the substring of $T$ that starts at position $3(q-1)n+1$, which fits in $T$ since $3(q-1)n+3L\le6L=\abs T$. There, the first $n$ codewords of $P$ are compared with row $q$, and each of the other $L-n$ codewords of $P$ encodes $0$ and contributes exactly two mismatches, whatever the aligned text symbol. So the Hamming distance is
+\[
+2L-2\sum_{j=1}^nM_{qj}x_j=2L-2c_q,
+\]
+and the threshold $k:=2L-1=2\abs P/3-1$ detects whether $c_q>0$. Each insertion into $X$ is two updates and the query is one query, so \cref{lem:app-transfer} gives $t_q=\Omega(\mathcal L_N)$, also for queries that return the Hamming distance. The threshold grows with the length of the pattern; we do not claim a bound for a constant threshold or for constant-factor approximation.
+
+\subsubsection{Active-document existence}\label{sec:active-documents}
+
+A collection of documents is fixed, and every document is active or inactive. An update activates a document, and a query asks whether some active document contains two given patterns. The reduction specializes the document construction of Jin and Xu~\cite[Section~3.3, proof of Theorem~1.7]{jin_tight_2022}: one of the two patterns is a marker that every document contains, and all updates are activations. Over the alphabet $[n]\cup\{\#,\$\}$, the document of $j\in[n]$ is
+\[
+D_j:=\#\,d_{1j}\cdots d_{nj},\qquad\text{where}\qquad
+d_{ij}:=\begin{cases}
+i,&j\in S_i,\\
+\$,&j\notin S_i.
+\end{cases}
+\]
+All documents are initially inactive, and their total length is $n(n+1)$. Inserting $j$ into $X$ activates $D_j$, and the query $q$ asks whether some active document contains both $q$ and $\#$. Every document contains $\#$, and $D_j$ contains $q$ exactly when $j\in S_q$; so the answer is yes exactly when $S_q\cap X\ne\emptyset$. The same holds for the query with the single pattern $q$. The costs are one update per insertion and one query, so \cref{lem:app-transfer} gives $t_q=\Omega(\mathcal L_N)$.
+
+% =====================================================================
+\subsection{Streaming regular-expression membership: amortized versus worst case}\label{sec:streaming-regex}
+% =====================================================================
+
+In streaming regular-expression membership, an expression $R$ is preprocessed, and a text then arrives one symbol at a time; after each symbol, the algorithm reports whether the text read so far belongs to $L(R)$, without knowing which symbol is the last one. Bille and Thorup~\cite{bille_regular_2010} and Dudek et al.~\cite{naor_streaming_2022} give algorithms for this problem. Here we give a direct encoding of Disjointness with constant amortized cost. We count the cell probes made while processing each symbol, including its report; preprocessing is not charged, the space is polynomial, and the conventions of \cref{sec:model} apply.
+
+\paragraph{The expression family.}
+Fix sets $S_1,\dots,S_m\subseteq[n]$. The alphabet consists of the symbol $\#$, the data symbols $a_1,\dots,a_n$ and the selectors $c_1,\dots,c_m$, and we write $\cup$ for the union (alternation) operator of regular expressions. For each $i\in[m]$ with $S_i\ne[n]$, let
+\[
+\Gamma_i := \bigcup_{j\in[n]\setminus S_i} a_j
+\]
+be the alternation of the data symbols of the elements outside $S_i$, and let the $i$-th branch be $\#\,\Gamma_i^*\,c_i$; if $S_i=[n]$, let the $i$-th branch be $\#\,c_i$. Let $R_{\vS}$ be the union of the $m$ branches, an ordinary regular expression that uses only union, concatenation and Kleene star. For every $q\in[m]$ and every sequence $j_1,\dots,j_k\in[n]$, in any order and possibly with repetitions,
+\begin{equation}\label{eq:streaming-regex-reduction}
+\#\,a_{j_1}\cdots a_{j_k}\,c_q\in L(R_{\vS})
+\qquad\Longleftrightarrow\qquad
+S_q\cap\{j_1,\dots,j_k\}=\emptyset.
+\end{equation}
+Indeed, the final selector $c_q$ forces the $q$-th branch, which accepts exactly when every preceding data symbol is $a_j$ for some $j\notin S_q$.
+
+\paragraph{Constant amortized time.}
+In preprocessing, store the incidence table of the sets $S_i$, a bit $\mathsf{seen}[j]=0$ for each $j\in[n]$, an empty list, and the parser state. After the initial $\#$, when $a_j$ arrives, append $j$ to the list if $\mathsf{seen}[j]=0$, and set $\mathsf{seen}[j]:=1$. When the first selector $c_q$ arrives, scan the list, report ``yes'' exactly when none of its indices belongs to $S_q$, and enter a terminal state. All earlier reports are ``no''. An initial symbol other than $\#$, a second $\#$, or any symbol after a selector causes permanent rejection, at constant cost per later symbol. The scan examines at most as many indices as there are preceding data symbols, so every prefix of length $L$ costs $O(L)$ in total, also for malformed texts. The expression has length $m\le M=O(mn)$. For $m=n$, we have $\log M=\Theta(\log n)$, the alphabet has $2n+1$ symbols, and the $O(n^2)$-bit incidence table and the $O(n)$ auxiliary words use polynomial space.
+
+\begin{theorem}[Streaming membership: amortized versus worst case]\label{thm:streaming-regex}
+Let $\mathcal R_n:=\{R_{\vS}:S_1,\ldots,S_n\subseteq[n]\}$, and let $M_n:=\max_{R\in\mathcal R_n}|R|=\Theta(n^2)$. Streaming membership for this family has a deterministic algorithm with $O(1)$ amortized time per symbol on every input stream.
+
+Consider a zero-error cell-probe algorithm for streaming membership for all of $\mathcal R_n$, with word size $w=\Theta(\log M_n)$ and arbitrary preprocessing of the given expression, which stores all information retained between symbols in its memory. Let $t_a$ be its worst-case cost on a data symbol, over all expressions, texts and random tapes, and let $t_c$ be an upper bound on its expected cost on a selector, for every expression and every text that ends with this selector. Then
+\[
+t_c=\Omega\!\left(\left(\frac{\log M_n}{\log(t_a w)}\right)^2\right).
+\]
+In particular, the worst-case time on some symbol, for some expression in the family and some text, is $\Omega\big((\log M_n/\log\log M_n)^2\big)$.
+\end{theorem}
+\begin{proof}
+The algorithm above gives the upper bound. For the lower bound, given an instance $S_1,\dots,S_n$ of insert-only multiphase Disjointness, preprocess $R_{\vS}$ and process the symbol $\#$ during Phase~I. Inserting $j$ into $X$ feeds the symbol $a_j$, and the query $q$ feeds the selector $c_q$; by~\eqref{eq:streaming-regex-reduction}, the report on $c_q$ answers the query. Keeping the writes made while processing $c_q$ in temporary workspace, as in \cref{lem:app-transfer}, we obtain a zero-error data structure with worst-case update time $t_a$ and expected query time $t_c$. Since $\log M_n=\Theta(\log n)$, \cref{thm:main} gives the bound on $t_c$. For the last statement, let $t$ be the worst-case time on all symbols, so that $t_a,t_c\le t$. If $t\ge\log^2 M_n$ there is nothing to prove; otherwise $\log(t_a w)=O(\log\log M_n)$, so $t\ge t_c=\Omega\big((\log M_n/\log\log M_n)^2\big)$.
+\end{proof}
+
+\paragraph{Binary alphabet.}
+Encode the symbols by distinct codewords of length $b=\Theta(\log n)$. The maximum expression length becomes $M^{\mathrm{bin}}_n=O(n^2\log n)$, with $\log M^{\mathrm{bin}}_n=\Theta(\log n)$; take $w=\Theta(\log M^{\mathrm{bin}}_n)$. Decoding preserves constant amortized time per bit: report ``no'' within incomplete codewords and reject invalid codewords permanently. A matcher with worst-case cost $t$ per bit yields source update and query costs at most $bt$. If $t>\log M^{\mathrm{bin}}_n$, the bound below is immediate. Otherwise $\log(btw)=O(\log\log M^{\mathrm{bin}}_n)$, so \cref{thm:main} gives $bt=\Omega\big((\log M^{\mathrm{bin}}_n/\log\log M^{\mathrm{bin}}_n)^2\big)$. Since $b=\Theta(\log M^{\mathrm{bin}}_n)$,
+\[
+t=\Omega\!\left(\frac{\log M^{\mathrm{bin}}_n}{(\log\log M^{\mathrm{bin}}_n)^2}\right).
+\]
+
+\paragraph{Related separations.}
+Union--find admits amortized $\Theta(\alpha(n))$ time~\cite{tarjan_efficiency_1975,fredman_cell_1989} but requires $\Theta(\log n/\log\log n)$ worst-case time~\cite{blum_single-operation_1985,fredman_cell_1989}. Cohen et al.~\cite{cohen_efficient_2011} obtain $O(\log\log k)$ amortized time and an $\Omega(\log k/\log\log k)$ worst-case cell-probe bound for variance-optimal reservoir sampling in their finite-precision model. Streaming $k$-mismatch has conditional bounds from combinatorial Boolean matrix multiplication~\cite{golan_streaming_2020,gawrychowski_towards_2018}.

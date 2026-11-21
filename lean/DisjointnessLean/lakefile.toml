@@ -1,0 +1,19 @@
+name = "disjointness-draft"
+version = "0.1.0"
+defaultTargets = ["DisjointnessDraft"]
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.19.0"
+
+[[require]]
+name = "PFR"
+git = "https://github.com/teorth/pfr.git"
+rev = "859f6b23d5532de385cff18fc25381e715dba199"
+
+[[lean_lib]]
+name = "DisjointnessFoundations"
+
+[[lean_lib]]
+name = "DisjointnessDraft"

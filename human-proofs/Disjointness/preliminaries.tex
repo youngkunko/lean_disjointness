@@ -1,0 +1,142 @@
+% =====================================================================
+\section{Preliminaries}\label{sec:prelim}
+% =====================================================================
+
+\subsection{Cell-probe conventions}\label{sec:model}
+
+Cells and addresses have $w$ bits. Computation and temporary workspace within an operation are free; all input-dependent information retained between operations resides in memory and is accessed through charged probes. Preprocessing is unrestricted and uncharged. As in~\cite{larsen_super-logarithmic_2025}, a random tape is drawn independently of the input, correctness holds for every input and tape, update time is worst case over inputs and tapes, and query time is expected over the tape for each fixed valid input history. We normalize $t_u,t_q\ge1$, take $t_u$ to be an integer, and state asymptotic bounds for sufficiently large instances.
+
+\subsection{Information theory}\label{sec:prelim-it}
+
+We collect the information-theoretic facts used in the proof; see \cite{cover_elements_2006} for background. Logarithms are base $2$ unless written $\ln$.
+
+\begin{definition}[Entropy, mutual information, divergence]
+The entropy of a random variable $X$ is $H(X) := \sum_x \Pr[X = x] \log\frac{1}{\Pr[X = x]}$, and the conditional entropy is $H(X | Y) := \E_{y \sim Y}\big[H(X | Y = y)\big]$. The mutual information between $X$ and $Y$, conditioned on $Z$, is $I(X; Y | Z) := H(X | Z) - H(X | Y, Z)$; when we need to specify the distribution $\mu$ of $(X, Y)$, we write $I_\mu(X; Y)$. The KL divergence and the total variation distance between two distributions $P$ and $Q$ are
+\[ D(P \,\|\, Q) := \sum_x P(x)\log\frac{P(x)}{Q(x)} \qquad\text{and}\qquad \norm{P - Q}_{TV} := \frac12\|P - Q\|_1. \]
+\end{definition}
+
+\noindent For a random variable $X$ and an event $E$, we write $X|_E$ for the distribution of $X$ conditioned on $E$, for instance $X|_{Y = y}$. A random variable in place of a distribution, as in $D(X \,\|\, Y)$, stands for its distribution.
+
+\begin{fact}[Basic properties]\label{fact:basic}
+For any random variables $A$, $B$, $C$ and $D$:
+\begin{enumerate}[label=(\alph*)]
+  \item If $A$ takes at most $2^\lambda$ values, then $H(A) \le \lambda$. Moreover, $0 \le H(A | B) \le H(A)$.
+  \item $I(A; B | C) = I(B; A | C)$ and $0 \le I(A; B | C) \le H(A | C)$. If $A$ and $B$ are independent given $C$, for instance if $A$ is a function of $C$, then $I(A; B | C) = 0$.
+  \item $I(A; B | C) = \E_{c \sim C}\big[I(A; B | C = c)\big]$.
+  \item $D(P \,\|\, Q) \ge 0$ for any two distributions $P$ and $Q$.
+  \item If $B'$ is a function of $B$, then $I(A; B' | C) \le I(A; B | C)$.
+  \item If $D$ is independent of $(A, B, C)$, then $I(A; B | C, D) = I(A; B | C)$.
+\end{enumerate}
+\end{fact}
+
+\begin{fact}[Chain rules]\label{fact:chain}
+\begin{enumerate}[label=(\alph*)]
+  \item For any random variables $A_1, \dots, A_k$, $B$ and $C$,
+  \[ I(A_1 \cdots A_k; B | C) \;=\; \sum_{j=1}^{k} I\big(A_j; B \bigm| C A_1 \cdots A_{j-1}\big). \]
+  \item For any two pairs of random variables $(X, Y)$ and $(X', Y')$,
+  \[ D\big(XY \,\|\, X'Y'\big) \;=\; D\big(X \,\|\, X'\big) + \E_{x \sim X}\Big[D\big(Y|_{X = x} \,\big\|\, Y'|_{X' = x}\big)\Big]. \]
+\end{enumerate}
+\end{fact}
+
+\begin{fact}\label{fact:drop-cond}
+For any random variables $A$, $B$, $C$ and $D$, if $I(B; D | A C) = 0$, then $I(A; B | C D) \le I(A; B | C)$.
+\end{fact}
+\begin{proof}
+By the chain rule (\cref{fact:chain}(a)) and \cref{fact:basic}(b),
+\[ I(A; B | C D) \;\le\; I(A D; B | C) \;=\; I(A; B | C) + I(B; D | A C) \;=\; I(A; B | C). \qedhere \]
+\end{proof}
+
+\begin{fact}[KL divergence and mutual information]\label{fact:kl-mi}
+For any random variables $A$ and $B$, $I(A; B) = \E_{b \sim B}\big[D\big(A|_{B=b} \,\|\, A\big)\big]$.
+\end{fact}
+
+\begin{fact}[Pinsker's inequality]\label{fact:pinsker}
+For any two distributions $P$ and $Q$,
+\[ \norm{P - Q}_{TV} \;\le\; \sqrt{(\ln 2/2)\, D(P \,\|\, Q)}. \]
+\end{fact}
+
+\subsection{Min-entropy}\label{sec:prelim-minent}
+
+The min-entropy of a random variable $A$ is $\Hmin(A) := -\log \max_a \Pr[A = a]$, and for a distribution $\nu$ we write $\Hmin(\nu)$ likewise. We use the average min-entropy of \cite{dodis_fuzzy_2008},
+\[ \tHmin(A | B) := -\log \E_{b \sim B}\Big[\max_a \Pr[A = a | B = b]\Big]. \]
+
+\begin{fact}[\cite{dodis_fuzzy_2008}]\label{fact:avg-minent}
+Let $A$, $B$, $C$ be random variables.
+\begin{enumerate}[label=(\alph*)]
+  \item If $B$ has at most $2^\lambda$ possible values, then $\tHmin(A | B, C) \ge \tHmin(A | C) - \lambda$.
+  \item For every $r > 0$, $\Pr_{b \sim B}\big[\Hmin(A | B = b) \ge \tHmin(A | B) - r\big] \ge 1 - 2^{-r}$.
+  \item If $B'$ is a function of $B$, then $\tHmin(A | B') \ge \tHmin(A | B)$.
+\end{enumerate}
+\end{fact}
+
+\begin{fact}\label{fact:event}
+Let $E \in \{0,1\}$ be a random variable with $\Pr[E = 1] > 0$. Then $\tHmin(X | Y, E {=} 1) \ge \tHmin(X | Y) - \log(1/\Pr[E = 1])$, where the left side is with respect to the distribution conditioned on $E = 1$.
+\end{fact}
+\begin{proof}
+For every $y$ with $\Pr[E = 1 | Y = y] > 0$, we have $\Pr[X = x | Y = y, E = 1] \le \Pr[X = x | Y = y]/\Pr[E = 1 | Y = y]$ and, by Bayes' rule, $\Pr[Y = y | E = 1]/\Pr[E = 1 | Y = y] = \Pr[Y = y]/\Pr[E = 1]$. Summing over such $y$, and then over all $y$,
+\[ \E_{y \sim Y | E = 1} \max_x \Pr[X = x | Y = y, E = 1] \;\le\; \sum_{y} \frac{\Pr[Y = y] \max_x \Pr[X = x | Y = y]}{\Pr[E = 1]} \;=\; \frac{2^{-\tHmin(X | Y)}}{\Pr[E = 1]}. \qedhere \]
+\end{proof}
+
+\begin{fact}[Conditioning on one side]\label{fact:one-side}
+Let $A, B$ be random variables, and let $E \in \{0,1\}$ be a function of $A$ with $\pi := \Pr[E = 1] > 0$. Then
+\[ I(A; B | E {=} 1) \le \frac{I(A; B)}{\pi} \qquad\text{and}\qquad \Hmin(B | E {=} 1) \ge \Hmin(B) - \log\frac1\pi, \]
+where the left sides are with respect to the distribution conditioned on $E = 1$.
+\end{fact}
+\begin{proof}
+Since $E$ is a function of $A$, $I(B; E | A) = 0$, so \cref{fact:drop-cond} and \cref{fact:basic}(b) and (c) give
+\[ I(A; B) \;\ge\; I(A; B | E) \;\ge\; \pi \cdot I(A; B | E {=} 1). \]
+For the second bound, $\Pr[B = b | E = 1] \le \Pr[B = b]/\pi$ for every $b$.
+\end{proof}
+
+\noindent The next two facts relate min-entropy to flat distributions and Shannon entropy. For a finite set $\cS$, $\cU_{\cS}$ denotes the uniform distribution on $\cS$; thus $D(\mu \,\|\, \cU_{\cS}) = \log\abs{\cS} - H(\mu)$.
+
+\begin{fact}[Flat decomposition; folklore, see e.g.\ {\cite[Lemma~6.10]{vadhan_pseudorandomness_2012}}]\label{fact:flat}
+If $\Hmin(\mu) \ge \log K$ for an integer $K \ge 1$, then $\mu$ is a convex combination of uniform distributions $\cU_{T}$ on $K$-element sets $T$.
+\end{fact}
+
+\begin{fact}[Smoothing \cite{jain_property_2009}; see {\cite[Claim~2.16]{ko_omega_2026}}]\label{fact:smooth}
+If $D(\mu \,\|\, \cU_{\cS}) \le t$ with $t > 1$, then for every $\alpha \ge 4$ there exists an event $E$ such that $\mu(E) \ge 1 - 1/\alpha$ and $\Hmin(\mu|_E) \ge \log\abs{\cS} - 2\alpha t$.
+\end{fact}
+
+\subsection{Rectangles}\label{sec:prelim-rect}
+
+We express the size of a combinatorial rectangle $\mathcal{A}\times\mathcal{B}$ through min-entropy. This lets us treat product distributions and distributions that are close to products in a common notation.
+
+\begin{definition}[Deficit]\label{def:deficit}
+Let $\cS$ be a finite family of sets. The \emph{deficit} of a distribution $\nu$ on $\cS$ is $\log\abs{\cS} - \Hmin(\nu)$.
+\end{definition}
+
+\noindent The deficit is zero exactly for the uniform distribution on $\cS$, and the uniform distribution on a subfamily $\mathcal{A} \subseteq \cS$ has deficit $\log(\abs{\cS}/\abs{\mathcal{A}})$. A deficit bound of $d$ therefore limits the mass of every point to $2^d/\abs{\cS}$. It measures how much the distribution can concentrate relative to uniform. Below, $(A,B) \sim \mu$ for a distribution $\mu$ on $\cS \times \cS$ with marginals $\mu^A, \mu^B$.
+
+\begin{definition}[Rectangles, near-rectangles, monochromatic]\label{def:rect}
+Let $d, \kappa, \delta \ge 0$.
+\begin{enumerate}[label=(\alph*)]
+  \item $\mu$ is a \emph{$d$-rectangle} if $\mu = \mu^A \otimes \mu^B$ and both marginals have deficit at most $d$. That is,
+  \begin{align*}
+      \Hmin(\mu^A) \;\ge\; \log\abs{\cS} - d \qquad\text{and}\qquad \Hmin(\mu^B) \;\ge\; \log\abs{\cS} - d.
+  \end{align*}
+  \item $\mu$ is a \emph{$(d,\kappa)$-near-rectangle} if both marginals have deficit at most $d$ and $I_\mu(A;B) \le \kappa$.
+  \item $\mu$ is \emph{$\delta$-monochromatic} if $\Pr_\mu[A \cap B \ne \emptyset] \le \delta$, and \emph{monochromatic} if it is $0$-monochromatic, i.e.\ supported on disjoint pairs.
+\end{enumerate}
+\end{definition}
+
+\noindent A $d$-rectangle is the distributional analog of a large combinatorial rectangle. For $\mathcal{A}, \mathcal{B} \subseteq \cS$, the uniform distribution $\cU_{\mathcal{A} \times \mathcal{B}} = \cU_{\mathcal{A}} \otimes \cU_{\mathcal{B}}$ is a $d$-rectangle if and only if $\abs{\mathcal{A}}, \abs{\mathcal{B}} \ge 2^{-d}\abs{\cS}$, since $\cU_{\mathcal{A}}$ has deficit $\log(\abs{\cS}/\abs{\mathcal{A}})$. Conversely, every $d$-rectangle is a convex combination of uniform distributions on combinatorial rectangles of almost this size.
+
+\begin{corollary}[Flat decomposition of rectangles]\label{cor:flat-rect}
+Let $\mu$ be a $d$-rectangle on $\cS \times \cS$, and let $K$ be an integer with $1 \le K \le 2^{-d}\abs{\cS}$. Then there are subfamilies $\mathcal{A}_j, \mathcal{B}_k \subseteq \cS$ of size $K$ and weights $p_j, q_k \ge 0$ with $\sum_j p_j = \sum_k q_k = 1$ such that
+\[ \mu \;=\; \sum_{j,k} p_j q_k\, \cU_{\mathcal{A}_j \times \mathcal{B}_k}. \]
+\end{corollary}
+\begin{proof}
+Both marginals of $\mu$ have min-entropy at least $\log\abs{\cS} - d \ge \log K$. So by \cref{fact:flat}, $\mu^A = \sum_j p_j\, \cU_{\mathcal{A}_j}$ and $\mu^B = \sum_k q_k\, \cU_{\mathcal{B}_k}$ for such subfamilies and weights. Therefore
+\[ \mu \;=\; \mu^A \otimes \mu^B \;=\; \sum_{j,k} p_j q_k\, \cU_{\mathcal{A}_j} \otimes \cU_{\mathcal{B}_k}. \qedhere \]
+\end{proof}
+
+\noindent A near-rectangle relaxes the product condition: its two sides may be correlated, and $\kappa$ bounds their mutual information. In particular, a $d$-rectangle is a $(d, 0)$-near-rectangle. Replacing a near-rectangle by the product of its marginals gives a rectangle that is close in total variation distance (see, e.g., \cite{ko_omega_2026}).
+
+\begin{lemma}[From near-rectangles to rectangles]\label{lem:rect}
+If $\mu$ is a $\delta$-monochromatic $(d,\kappa)$-near-rectangle, then $\mu^A \otimes \mu^B$ is a $\big(\delta + \sqrt{(\ln 2/2)\,\kappa}\big)$-monochromatic $d$-rectangle.
+\end{lemma}
+\begin{proof}
+Let $R := \mu^A \otimes \mu^B$. It has the same marginals as $\mu$, so it is a $d$-rectangle. By the chain rule for KL divergence (\cref{fact:chain}(b)) and \cref{fact:kl-mi}, $D(\mu \,\|\, R) = \E_{b \sim \mu^B}\big[D(A|_{B = b} \,\|\, \mu^A)\big] = I_\mu(A; B) \le \kappa$, so $\norm{\mu - R}_{TV} \le \sqrt{(\ln 2/2)\,\kappa}$ by \cref{fact:pinsker}. Therefore
+\[ \Pr_{(A, B) \sim R}\big[A \cap B \ne \emptyset\big] \;\le\; \Pr_{(A, B) \sim \mu}\big[A \cap B \ne \emptyset\big] + \norm{\mu - R}_{TV} \;\le\; \delta + \sqrt{(\ln 2/2)\,\kappa}. \qedhere \]
+\end{proof}
