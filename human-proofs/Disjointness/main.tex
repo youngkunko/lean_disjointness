@@ -1,0 +1,795 @@
+\pdfoutput=1
+\documentclass[11pt]{article}
+
+% =====================================================================
+%  Draft switch. \drafttrue shows TODO/YK notes, margin status tags and
+%  the status table. \draftfalse hides all of them.
+% =====================================================================
+\newif\ifdraft
+\draftfalse
+
+\usepackage[letterpaper,margin=1in,marginparwidth=0.8in,marginparsep=0.1in]{geometry}
+\usepackage{microtype}
+\setlength{\emergencystretch}{3em}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage{booktabs,array,longtable}
+\usepackage{float}
+\floatstyle{boxed}
+\newfloat{Problem}{H}{prb}
+\newfloat{Protocol}{H}{prt}
+\usepackage{tikz}
+\usetikzlibrary{arrows,positioning,decorations.pathreplacing}
+\usepackage[colorlinks=true,linkcolor=blue!60!black,citecolor=green!40!black,urlcolor=blue!60!black]{hyperref}
+\usepackage[capitalise,nameinlink]{cleveref}
+\crefname{Protocol}{Protocol}{Protocols}
+\crefname{Problem}{Problem}{Problems}
+
+% ---------------------------------------------------------------------
+%  Notes (all disappear with \draftfalse)
+% ---------------------------------------------------------------------
+\newcommand{\TODO}[1]{\ifdraft{\color{red}\textbf{[TODO:} #1\textbf{]}}\fi}
+\newcommand{\YK}[1]{\ifdraft{\color{blue}[YK: #1]}\fi}
+\newcommand{\status}[1]{\ifdraft\marginpar{\raggedright\footnotesize\color{Plum}\textsf{#1}}\fi}
+
+% ---------------------------------------------------------------------
+%  Theorem environments (one shared counter)
+% ---------------------------------------------------------------------
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{fact}[theorem]{Fact}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\crefname{fact}{Fact}{Facts}
+% restated results keep their original number
+\makeatletter
+\newtheorem*{rep@theorem}{\rep@title}
+\newcommand{\newreptheorem}[2]{%
+\newenvironment{rep#1}[1]{%
+\def\rep@title{#2 \ref*{##1}}%
+\begin{rep@theorem}}%
+{\end{rep@theorem}}}
+\makeatother
+\newreptheorem{corollary}{Corollary}
+\crefname{claim}{Claim}{Claims}
+
+% ---------------------------------------------------------------------
+%  Macros
+% ---------------------------------------------------------------------
+\newcommand{\eps}{\varepsilon}
+\newcommand{\E}{\mathop{\mathbb{E}}}
+\newcommand{\abs}[1]{\left|#1\right|}
+\newcommand{\cS}{\mathcal{S}}
+\providecommand{\cA}{\mathcal{A}}
+\providecommand{\cB}{\mathcal{B}}
+\newcommand{\cI}{\mathcal{I}}
+\newcommand{\cE}{\mathcal{E}}
+\newcommand{\cD}{\mathcal{D}}
+\providecommand{\cU}{\mathcal{U}}
+\newcommand{\DISJ}{\mathrm{DISJ}}
+\newcommand{\KL}{\mathrm{KL}}
+\newcommand{\TV}{\mathrm{TV}}
+\providecommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\Hmin}{H_\infty}
+\newcommand{\tHmin}{\widetilde{H}_\infty}
+\newcommand{\vS}{\vec{S}}
+\newcommand{\Csam}{\widetilde{C}_i}
+\newcommand{\Aall}{A_{\mathrm{all}}}
+\newcommand{\Bin}{\mathrm{Bin}}
+\newcommand{\polylog}{\operatorname{polylog}}
+
+\newenvironment{proofof}[1]{\smallskip\noindent{\bf Proof of #1.}}%
+{\hspace*{\fill}$\Box$\par}
+
+\usepackage{xspace}
+\newcommand{\Patrascu}{P\u{a}tra\c{s}cu\xspace}
+\newcommand{\Hastad}{H\r{a}stad}
+
+\hypersetup{
+  pdftitle={Unconditional Boolean Dynamic Lower Bounds from Disjointness},
+  pdfauthor={Young Kun Ko},
+  pdfkeywords={cell-probe model, dynamic data structures, lower bounds, communication complexity, directed reachability, set disjointness}
+}
+
+\title{Unconditional Boolean Dynamic Lower Bounds \\from Disjointness}
+
+\author{Young Kun Ko\thanks{Department of Computer Science and Engineering, Pennsylvania State University, University Park, PA, USA. \texttt{ykko@psu.edu}}}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We prove an unconditional $\Omega\big((\log n/\log\log n)^2\big)$ lower bound on the maximum of the worst-case update time and expected query time for the insert-only version of Pătraşcu's multiphase Disjointness problem [STOC 2010]. The bound holds in the zero-error cell-probe model with logarithmic word size. Pătraşcu's reductions transfer it to directed reachability under edge insertions, already on directed acyclic graphs of depth $2$. This improves the $\widetilde\Omega(\log^{3/2} n)$ bound of Larsen and Yu [SICOMP 2025] to the quadratic-logarithmic scale previously attained for dynamic range counting and multiphase Inner Product. The bound also transfers to a broad collection of dynamic graph, algebraic, geometric, and string problems.
+
+We also obtain a separation between amortized and worst-case time for streaming regular-expression membership. For a simple family of expressions of maximum length $M$ over a polynomial-size alphabet, a deterministic algorithm uses $O(1)$ amortized time per symbol on every input stream, whereas every zero-error cell-probe algorithm with word size $w=\Theta(\log M)$ requires $\Omega\big((\log M/\log\log M)^2\big)$ time on some symbol.
+
+The proof adapts Ko's 2.5-round multiphase communication framework [FOCS 2026] from Inner Product to Disjointness. Our main technical observation is that the protocol's verification step allows a one-sided corruption bound to replace the discrepancy property used for Inner Product.
+\end{abstract}
+
+\newpage
+% =====================================================================
+\section{Introduction}\label{sec:intro}
+% =====================================================================
+
+Recent algorithmic breakthroughs have exposed the vulnerability of central hardness conjectures. At the same time, Ko~\cite{ko_omega_2026} offered \emph{a new hope} for unconditional Boolean dynamic lower bounds: a program to unify bounds at the quadratic-logarithmic scale through 2.5-round communication games. In this work, \emph{the unconditional lower bounds strike back}: we extend the framework from Inner Product to Disjointness and obtain unconditional bounds for a broad collection of dynamic graph, set, matrix, geometric, and string problems.
+
+The common source is \Patrascu's multiphase Disjointness problem~\cite{patrascu_mihai_towards_2010}: preprocess a family of sets, insert elements into a set $X$, and finally test whether $X$ is disjoint from a specified member of the family. For $n$ preprocessed subsets of $[n]$, we prove
+\[
+\max(t_u,t_q)=\Omega\!\left(\left(\frac{\log n}{\log\log n}\right)^2\right)
+\]
+in the zero-error cell-probe model with word size $w=\Theta(\log n)$, where $t_u$ is the worst-case insertion time and $t_q$ the expected query time on each input. Preprocessing is unrestricted. \Cref{thm:main-informal} gives the stronger update/query trade-off from which all our applications follow.
+
+Disjointness connects this theorem to problems with very different query interfaces. Known reductions, and adaptations of published constructions, transfer the bound to incremental directed reachability and bipartite matching, planar distances, range mode, inverse-entry and determinant maintenance, geometric counting, and string matching. They use $O(1)$ target operations per source operation and change the instance size only polynomially, so they preserve the quadratic-logarithmic scale. \Cref{tab:intro-applications} lists these problems with references, and \cref{sec:graphs} collects the constructions, attributes their sources, and checks that they meet the requirements of our model.
+
+Directed reachability is a leading example. Our bound holds already under edge insertions on depth-$2$ directed acyclic graphs and improves the $\widetilde\Omega(\log^{3/2}n)$ bound of Larsen and Yu~\cite{larsen_super-logarithmic_2025} to the quadratic-logarithmic scale previously attained for dynamic range counting and multiphase Inner Product~\cite{larsen_cell_2012,ko_omega_2026}.
+
+We also obtain a separation between amortized and worst-case time for streaming regular-expression membership, which asks after each arriving symbol whether the prefix read so far matches a preprocessed expression. For a simple family of expressions of maximum length $M$ over a polynomial-size alphabet, a deterministic algorithm uses $O(1)$ amortized time per symbol on every input stream, whereas every zero-error cell-probe algorithm with word size $w=\Theta(\log M)$ requires $\Omega\big((\log M/\log\log M)^2\big)$ time on some symbol (\cref{thm:streaming-regex-informal}). Thus the Disjointness bound also gives an unconditional obstruction to deamortizing this streaming computation.
+
+\paragraph{The vulnerability of hardness conjectures.}
+Many of these dynamic problems have been studied through polynomial conditional lower bounds. Such a bound shows that a faster data structure would give a faster algorithm for a problem conjectured to be hard, such as 3SUM, all-pairs shortest paths (APSP), or CNF satisfiability~\cite{patrascu_mihai_towards_2010,abboud_popular_2014}. These reductions have been remarkably successful at charting relationships among problems, but they do not by themselves establish that any of the problems is hard. An unconditional lower bound proves hardness within the stated computational model, independently of such conjectures.
+
+Recent events have made this distinction concrete. An algorithm discovered by Claude (Anthropic), subsequently analyzed, strengthened, and presented by Alman and Vassilevska Williams~\cite{alman_truly_2026}, yields truly subquadratic 3SUM and truly subcubic APSP algorithms, refuting the corresponding conjectures. Two recent manuscripts released by OpenAI\footnote{\emph{The Exponential Time Hypothesis is False}, OpenAI, October 25, 2026; available from the \href{https://github.com/openai/math/blob/main/preprints/The-Exponential-Time-Hypothesis-is-False-October-25-2026/README.md}{OpenAI Math repository}.} and Anthropic\footnote{\emph{A $2^{o(n)}$ Time Algorithm for 3-SAT}, Claude (Anthropic), 2026; \href{https://github.com/anthropics/formal-math/blob/main/eth/README.md}{paper and Lean formalization}.} claim subexponential algorithms for 3-SAT, which would refute the Exponential Time Hypothesis (ETH) and hence the Strong Exponential Time Hypothesis (SETH) \cite{impagliazzo_which_2001}.
+
+The refuted conjectures no longer supply hardness for the corresponding lower bounds. The web of reductions remains intact, but its starting premise is gone, and reductions alone cannot establish the hardness of their targets. Our goal is to supply the missing foundation with \textbf{an unconditional lower bound} and put the existing reduction network to use. We do so for multiphase Disjointness: our quadratic-logarithmic lower bound is a proved source of hardness, which established reductions propagate to a broad collection of dynamic problems.
+
+\subsection{Previous work}\label{sec:previous}
+
+\subsubsection{Conditional lower bounds across dynamic problems}
+
+Conditional lower bounds motivated this reduction network. \Patrascu~\cite{patrascu_mihai_towards_2010} introduced multiphase Disjointness, proved its conditional hardness under the 3SUM conjecture, and gave reductions to reachability, shortest paths, subgraph connectivity, and set and array problems. Subsequent work developed conditional bounds for graph problems~\cite{abboud_popular_2014,henzinger_unifying_2015}, planar graphs~\cite{abboud_popular_2016}, dynamic matrices~\cite{van_den_brand_dynamic_2019}, geometric counting~\cite{dallant_conditional_2022,jin_tight_2022}, and string problems~\cite{clifford_upper_2018,charalampopoulos_internal_2019}. The 3SUM and APSP refutations~\cite{alman_truly_2026} have removed central foundations of this program: those conjectures no longer support the associated lower bounds. The claimed ETH refutations discussed above would likewise refute SETH. The reductions remain valid, and many can be specialized or adapted to a single evolving set and a final selected query. The refutations thus leave the affected reduction chains intact, but with no valid source of hardness.
+
+\subsubsection{Unconditional cell-probe lower bounds}
+The cell-probe model~\cite{yao_should_1981} charges only for memory access: memory consists of $w$-bit cells, each read or write costs one probe, and computation is free. A lower bound therefore also applies to word-RAM algorithms with the same word size. We work with $w=\Theta(\log n)$ and allow arbitrary preprocessing, so the lower bound concerns the information that must be accessed while processing updates and queries. The model's generous assumptions make lower bounds especially difficult to prove, helping explain the slow progress even for basic dynamic problems.
+
+Fredman and Saks~\cite{fredman_cell_1989} introduced the Chronogram method and proved an $\Omega(\log n/\log\log n)$ lower bound, which transfers to dynamic connectivity~\cite{miltersen_complexity_1994,henzinger_lower_1998}. \Patrascu and Demaine~\cite{patrascu_logarithmic_2006} improved the connectivity bound to $\Omega(\log n)$. For almost two decades, the strongest unconditional lower bounds for natural graph problems remained at the (near-)logarithmic scale. For problems with word-size answers, Larsen~\cite{larsen_cell_2012} reached $\Omega((\log n/\log\log n)^2)$ for weighted range counting. Reaching stronger bounds for Boolean queries required a further breakthrough: Larsen, Weinstein and Yu~\cite{larsen_crossing_2020} proved an $\widetilde\Omega(\log^{3/2}n)$ bound. Building on their technique, Larsen and Yu~\cite{larsen_super-logarithmic_2025} obtained the first super-logarithmic bound for a natural graph problem, proving
+\[
+t_q=\Omega\!\left(\frac{\log^{3/2}n}{\log^2(t_u w)}\right)
+\]
+for incremental reachability on DAGs, with worst-case update time $t_u$ and expected query time $t_q$~\cite[Theorem~1]{larsen_super-logarithmic_2025}. \Cref{fig:reach-timeline} places our reachability consequence in this progression.
+
+\begin{figure}[!ht]
+\centering
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  pt/.style={circle, draw, thick, fill=black, minimum size=7pt, inner sep=0pt},
+  lab/.style={align=center, font=\small},
+  yr/.style={font=\small},
+]
+  % timeline
+  \draw[thick, ->] (-0.6,0) -- (13.6,0);
+  % entries: position, year, bound, citation, height
+  \foreach \x/\yr/\bnd/\ref/\h in {
+      1.0/1989/{$\Omega\!\left(\frac{\log n}{\log\log n}\right)$}/{Fredman--Saks \cite{fredman_cell_1989};\\ via \cite{miltersen_complexity_1994,henzinger_lower_1998}}/1.35,
+      5.2/2004/{$\Omega(\log n)$}/{\Patrascu--Demaine \cite{patrascu_logarithmic_2006}}/1.35,
+      8.9/2023/{$\widetilde{\Omega}\big(\log^{3/2} n\big)$}/{Larsen--Yu \cite{larsen_super-logarithmic_2025}}/1.35,
+      12.3/2026/{$\Omega\!\left(\big(\frac{\log n}{\log\log n}\big)^{2}\right)$}/{This work}/1.35} {
+    \draw[thick] (\x,-0.12) -- (\x,0.12);
+    \node[yr] at (\x,-0.45) {\yr};
+    \draw[gray] (\x,0.12) -- (\x,\h-0.35);
+    \node[pt] at (\x,\h-0.35) {};
+    \node[lab, anchor=south] at (\x,\h-0.15) {\bnd\\[2pt] \ref};
+  }
+\end{tikzpicture}
+\caption{Unconditional cell-probe lower bounds for dynamic directed reachability, with $w = \Theta(\log n)$, stated as bounds on $\max(t_u, t_q)$. For prior results, dates refer to conference appearances. The first two bounds transfer from fully dynamic undirected connectivity to fully dynamic directed reachability; the later bounds already hold for incremental reachability. The first is Fredman and Saks's bound for prefix parity \cite{fredman_cell_1989}, which transfers to dynamic connectivity by a simple reduction observed independently by Miltersen et al.\ \cite{miltersen_complexity_1994} and by Henzinger and Fredman \cite{henzinger_lower_1998}.}
+\label{fig:reach-timeline}
+\end{figure}
+
+The Boolean-answer restriction is central to this history. The Chronogram method separates information according to the epochs in which updates arrive. Larsen's cell-sampling argument forces many probes to an individual epoch, but its original encoding argument uses the many bits returned by a query. Larsen, Weinstein and Yu instead reduce a Boolean data structure to a one-way communication game in which the receiver predicts the answer with a small advantage over random guessing; a peak-to-average lemma based on Chebyshev polynomials bounds this advantage~\cite{larsen_crossing_2020}. This is the framework underlying Larsen and Yu's reachability bound.
+
+For multiphase Disjointness itself, \Patrascu's conjectured polynomial lower bound remains open. He proposed a three-party communication game whose hardness would imply the conjecture in the cell-probe model~\cite{patrascu_mihai_towards_2010}. Earlier progress includes bounds for non-adaptive data structures~\cite{brody_adapt_2015}, regimes with very fast queries~\cite{clifford_new_2015}, semi-adaptive data structures via two-round communication~\cite{ko_adaptive_2020,dvorak_lower_2020}, and a 1.5-round version of the communication game~\cite{chattopadhyay_upper_2016}. Proving \Patrascu's conjectured communication lower bound even for three-round protocols would imply major circuit lower bounds~\cite{ko_adaptive_2020}.
+
+\paragraph{The unconditional lower bounds strike back.}
+The new framework of~\cite{ko_omega_2026} is a common route to quadratic-logarithmic unconditional lower bounds for Boolean dynamic problems. Its 2.5-round game lets Bob verify Alice's simulation and detect its failure. Its first instance, multiphase Inner Product over $\mathbb F_2$, reaches the scale previously attained by Larsen for word-size answers~\cite{larsen_cell_2012}. Beyond that instance, the framework gives a general recipe based on discrepancy bounds, initiating a program to unify dynamic lower bounds at this scale through communication hardness and reductions.
+
+We take the next step in this program by extending the framework to Disjointness. This requires a further insight into the 2.5-round game: the hard distributions for Disjointness do not satisfy the discrepancy property used for Inner Product in~\cite{ko_omega_2026}. We exploit verification by conditioning on certified ``disjoint'' answers, allowing a one-sided corruption bound to replace discrepancy. This change matters beyond the source problem: \Patrascu's reductions \cite{patrascu_mihai_towards_2010} begin from Disjointness, and many later constructions also encode it. The extension therefore connects the 2.5-round framework to a broad collection of natural dynamic problems. In the spirit of \Patrascu's program of reductions and communication lower bounds~\cite{patrascu_unifying_2008,patrascu_mihai_towards_2010}, the same constructions now transfer a proved lower bound, independently of the conjectures that motivated them.
+
+\subsubsection{Streaming and amortization}
+Lower bounds for dynamic data structures are closely related to lower bounds on streaming processing time. A streaming membership algorithm updates its state as symbols arrive and reports after each arrival whether the current prefix belongs to a fixed language. This connection lets us apply our Disjointness bound to streaming regular-expression membership, studied by Bille and Thorup~\cite{bille_regular_2010} and Dudek et al.~\cite{naor_streaming_2022}. Earlier separations between amortized and worst-case time include union--find~\cite{tarjan_efficiency_1975,blum_single-operation_1985,fredman_cell_1989} and variance-optimal reservoir sampling~\cite{cohen_efficient_2011}; we refer the reader to \cref{sec:streaming-regex} for the detailed discussion.
+
+\subsection{Our results}\label{sec:results}
+
+\paragraph{Main result: multiphase Disjointness.}
+Our main technical result is an $\Omega\big((\log n/\log\log n)^2\big)$ lower bound for the multiphase problem of \Patrascu~\cite{patrascu_mihai_towards_2010} with Disjointness, in its insert-only form. All applications in this paper follow from this theorem.
+
+\begin{Problem}
+\begin{itemize}[leftmargin=*]
+  \item \emph{Phase I.} Sets $S_1,\dots,S_m\subseteq[n]$ arrive and are preprocessed arbitrarily.
+  \item \emph{Phase II.} Elements are inserted one at a time into a set $X\subseteq[n]$, initially empty; each insertion probes at most $t_u$ cells.
+  \item \emph{Phase III.} An index $q\in[m]$ arrives, and the data structure outputs whether $S_q\cap X=\emptyset$, reading at most $t_q$ cells in expectation; it does not write.
+\end{itemize}
+\caption{Insert-only multiphase Disjointness\label{prob:multiphase}}
+\end{Problem}
+
+\begin{samepage}
+\begin{theorem}[Main technical theorem, informal]\label{thm:main-informal}
+Every zero-error cell-probe data structure for insert-only multiphase Disjointness with $m=n$ query sets, word size $w=\Theta(\log n)$, worst-case update time $t_u$ per insertion and expected query time $t_q$ satisfies
+\[
+t_q=\Omega\!\left(\left(\frac{\log n}{\log(t_u w)}\right)^2\right).
+\]
+In particular,
+\[
+\max(t_u,t_q)=\Omega\!\left(\left(\frac{\log n}{\log\log n}\right)^2\right).
+\]
+\end{theorem}
+\end{samepage}
+
+\noindent \Cref{thm:main} gives the formal statement; \cref{sec:model} specifies the randomness and cost conventions.
+
+\Patrascu~\cite{patrascu_mihai_towards_2010} conjectured a polynomial lower bound for the multiphase problem when $m=n^{1+\Omega(1)}$ and showed that Disjointness serves as a common source of hardness for several natural dynamic problems. Our theorem does not resolve that conjecture, but reaches the quadratic-logarithmic scale already in the regime $m=n$. Ko~\cite{ko_omega_2026} and Kouck\'y et al.~\cite{koucky_natural_2026} discuss barriers to going beyond this scale with current techniques. We next give two consequences.
+
+\begin{samepage}
+\paragraph{Corollary I: dynamic problems.}
+Applying \Patrascu's reduction gives a quadratic-logarithmic lower bound for incremental directed reachability, improving the bound of Larsen and Yu~\cite{larsen_super-logarithmic_2025}.
+
+\begin{corollary}[Directed reachability, informal]\label{thm:reach-informal}
+Every zero-error cell-probe data structure for incremental directed reachability on $N$ vertices, starting with no edges, with word size $w=\Theta(\log N)$, worst-case insertion time $t_u$ and expected query time $t_q$, satisfies
+\[
+t_q=\Omega\!\left(\left(\frac{\log N}{\log(t_u w)}\right)^2\right);
+\]
+in particular,
+\[
+\max(t_u,t_q)=\Omega\!\left(\left(\frac{\log N}{\log\log N}\right)^2\right).
+\]
+This holds already on depth-$2$ DAGs whose queries ask whether a fixed sink is reachable.
+\end{corollary}
+\end{samepage}
+
+\noindent \Cref{thm:reach} gives the formal statement. The bound trivially applies to fully dynamic directed reachability, since a fully dynamic data structure must handle insertion-only sequences.
+
+The same $\Omega\big((\log N/\log\log N)^2\big)$ lower bound on $\max\{t_u,t_q\}$ follows for the dynamic problems in \cref{tab:intro-applications}, which describes the tasks and gives representative references to prior work. The existing web of reductions gives these consequences their breadth, and we expect further applications beyond this list. Each consequence is an unconditional lower bound for its target problem, obtained by transferring proved hardness from Disjointness.
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.05}
+\setlength{\LTcapwidth}{\textwidth}
+\setlength{\LTpre}{\smallskipamount}
+\setlength{\LTpost}{\medskipamount}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.58\textwidth}>{\raggedright\arraybackslash}p{\dimexpr0.17\textwidth-4\tabcolsep\relax}@{}}
+\caption{Dynamic applications: brief descriptions and representative prior work.}
+\label{tab:intro-applications}\\
+\toprule
+\textbf{Problem} & \textbf{Task} & \textbf{Prior work} \\
+\midrule
+\endfirsthead
+\multicolumn{3}{@{}l}{\tablename~\thetable\ (continued)}\\
+\toprule
+\textbf{Problem} & \textbf{Task} & \textbf{Prior work} \\
+\midrule
+\endhead
+\multicolumn{3}{r@{}}{\footnotesize Continued on the next page.}\\
+\endfoot
+\bottomrule
+\endlastfoot
+\multicolumn{3}{@{}l}{\emph{Graphs (edge insertions unless stated otherwise)}}\\*
+\hyperref[sec:graph-problems]{Directed reachability} & Is one vertex reachable from another? Includes fixed $s$--$t$ queries and counting vertices reachable from a fixed source. & \cite{patrascu_mihai_towards_2010,abboud_popular_2014} \\
+\addlinespace[2pt]
+\hyperref[sec:graph-problems]{Strong connectivity} & Can two vertices reach one another along directed paths? & \cite{haeupler_incremental_2012} \\
+\addlinespace[2pt]
+\hyperref[sec:graph-problems]{Directed cycle detection} & Does the graph contain a directed cycle? & \cite{haeupler_incremental_2012,chen_almost-linear_2024} \\
+\addlinespace[2pt]
+\hyperref[sec:graph-problems]{Undirected shortest paths} & Return the distance between two vertices, possibly fixed vertices $s$ and $t$. & \cite{patrascu_mihai_towards_2010,abboud_popular_2014} \\
+\addlinespace[2pt]
+\hyperref[sec:graph-problems]{Subgraph connectivity} & Activate vertices of a fixed undirected graph; are two vertices connected in the induced subgraph? & \cite{patrascu_mihai_towards_2010} \\
+\addlinespace[2pt]
+\hyperref[sec:graph-problems]{Triangle detection} & Does an undirected graph contain a triangle? & \cite{henzinger_unifying_2015} \\
+\addlinespace[2pt]
+\hyperref[sec:bipartite-matching]{Bipartite matching} & Return the maximum number of vertex-disjoint edges, or test whether such edges can cover every vertex. & \cite{abboud_popular_2014} \\
+\addlinespace[2pt]
+\hyperref[sec:app-density]{Exact densest subgraph} & Return the maximum ratio of induced edges to vertices over nonempty vertex subsets. & \cite{henzinger_unifying_2015} \\
+\addlinespace[2pt]
+\hyperref[sec:app-marked-distance]{Nearest marked vertex} & In a fixed graph with changing vertex marks, return the distance from a queried vertex to the nearest marked vertex. & \cite{henzinger_unifying_2015} \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Planar graphs (edge insertions)}}\\*
+\hyperref[sec:planar-distance]{Undirected distance} & Return the distance between two vertices; edge weights are unit or positive. & \cite{abboud_popular_2016} \\
+\addlinespace[2pt]
+\hyperref[sec:planar-girth]{Directed girth} & Return the length of a shortest directed cycle; edge weights are unit or positive. & \cite{abboud_popular_2016} \\
+\addlinespace[2pt]
+\hyperref[sec:planar-diameter]{Diameter} & Return the largest distance between any two vertices in a graph with positive edge weights. & \cite{abboud_popular_2016} \\
+\addlinespace[2pt]
+\hyperref[sec:planar-matching]{Maximum-weight bipartite matching} & Return the maximum total weight of vertex-disjoint edges in a bipartite graph with positive edge weights. & \cite{abboud_popular_2016} \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Sets and arrays}}\\*
+\hyperref[sec:set-disjointness]{Set disjointness} & Insert elements into a family of sets; are two queried sets disjoint? & \cite{kopelowitz_dynamic_2015} \\
+\addlinespace[2pt]
+\hyperref[sec:range-mode]{Range mode} & Change individual array entries; return a most frequent value in a queried subarray. & \cite{chan_linear-space_2014} \\
+\addlinespace[2pt]
+\hyperref[sec:langerman]{Langerman's problem} & Change individual entries of an integer array; does any nonempty prefix have sum zero? & \cite{patrascu_mihai_towards_2010} \\
+\addlinespace[2pt]
+\hyperref[sec:pagh]{Pagh's problem} & Add intersections of existing sets to a family; test whether a queried element belongs to a queried set. & \cite{patrascu_mihai_towards_2010} \\
+\addlinespace[2pt]
+\hyperref[sec:erickson]{Erickson's problem} & Increment an entire matrix row or column; return the largest matrix entry. & \cite{patrascu_mihai_towards_2010,ko_omega_2026} \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Matrices over prime fields of size $\Theta(N)$}}\\*
+\hyperref[sec:app-inverse]{Inverse-entry zero testing} & Maintain a nonsingular matrix under single-entry updates; is a specified inverse entry zero? & \cite{van_den_brand_dynamic_2019} \\
+\addlinespace[2pt]
+\hyperref[sec:app-determinant]{Determinant} & Change individual matrix entries; return the determinant or test whether it equals one. & \cite{van_den_brand_dynamic_2019} \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Geometry}}\\*
+\hyperref[sec:distinct-color-counting]{2D distinct-color counting} & Insert colored points; count the distinct colors inside a queried axis-aligned rectangle. & \cite{jin_tight_2022} \\
+\addlinespace[2pt]
+\hyperref[sec:hull]{3D convex-hull vertex counting} & Insert points; count the vertices of their convex hull. & \cite{dallant_conditional_2022} \\
+\addlinespace[2pt]
+\hyperref[sec:maxima]{3D maximal-point counting} & Insert points; count those for which no other point is at least as large in every coordinate. & \cite{dallant_conditional_2022,jin_tight_2022} \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Strings}}\\*
+\hyperref[sec:internal-dictionary]{Internal dictionary matching} & Insert patterns specified as substrings of a fixed text; does a queried text interval contain an inserted pattern? & \cite{charalampopoulos_internal_2019} \\
+\addlinespace[2pt]
+\hyperref[sec:hamming-threshold]{Binary Hamming-distance threshold} & Change bits of a pattern; does it differ from an aligned substring of a fixed text in at most $k$ positions? The threshold $k$ is fixed and proportional to the pattern length. & \cite{clifford_upper_2018} \\
+\addlinespace[2pt]
+\hyperref[sec:active-documents]{Active-document existence} & Turn on documents from a fixed collection; does an active document contain both queried patterns? & \cite{jin_tight_2022} \\
+\end{longtable}
+\endgroup
+These consequences follow from known reductions or simple adaptations of published constructions; for completeness and reader convenience, \cref{sec:graphs} gives the reductions and verifies their applicability to our precise model. The problem names in \cref{tab:intro-applications} link to their constructions, and \cref{tab:appendix-transfers} records the precise trade-offs.
+All statements use the zero-error model, worst-case update time, and per-input expected query time of \cref{thm:reach-informal}, and many hold already under insertion-only updates. A reduction that answers the source query with target queries alone bounds $t_q$; one that also needs a constant number of target updates bounds $t_u+t_q$ (\cref{lem:app-transfer}).
+
+\paragraph{Corollary II: streaming membership, amortized versus worst case.}
+Our theorem also bounds the worst-case time per symbol of streaming regular-expression membership, a basic streaming task \cite{bille_regular_2010,naor_streaming_2022}. For each query set $S_i$, let $\Gamma_i$ be the alternation of the alphabet symbols corresponding to elements outside $S_i$, and consider the regular expression
+\[
+\bigcup_i \big(\#\, \Gamma_i^*\, c_i\big),
+\]
+where $\cup$ denotes alternation and the final symbol $c_i$ selects the query; when $S_i=[n]$, the $i$th branch is simply $\#c_i$. Data symbols can be recorded in constant time, keeping only their first occurrence, while on the final selector one scans the resulting list of distinct symbols. Consequently, this family admits deterministic $O(1)$ amortized processing time per arriving symbol on every input stream.
+
+A matcher with small worst-case processing time per symbol would yield a multiphase data structure with the same update and query bounds. Writes performed while processing the final selector can be simulated in temporary workspace, since no later operation follows.
+
+\begin{corollary}[Streaming regular-expression membership, informal]\label{thm:streaming-regex-informal}
+There is a family of regular expressions of maximum length $M$ over a polynomial-size alphabet for which streaming membership, with an answer after every symbol, can be solved in deterministic $O(1)$ amortized time per arriving symbol on every input stream, but every zero-error cell-probe algorithm with word size $w=\Theta(\log M)$ requires
+\[
+\Omega\!\left(\left(\frac{\log M}{\log\log M}\right)^2\right)
+\]
+worst-case processing time on some symbol.
+\end{corollary}
+
+\noindent Binary encoding gives a weaker $\Omega(\log M/(\log\log M)^2)$ bound per bit. The symbols in the original alphabet occupy $O(1)$ words each. \Cref{sec:streaming-regex} gives both statements, their reductions, and a comparison with earlier separations.
+
+\subsection{Proof overview}\label{sec:overview}
+
+We sketch the proof of \cref{thm:main-informal}, which follows the framework of \cite{ko_omega_2026} and works in two layers. The outer layer is the Chronogram method of Fredman and Saks \cite{fredman_cell_1989}: we split the insertions into $\Theta(\log n/\log(t_u w))$ epochs, and show that a query must probe $\Omega(\log n/\log(t_u w))$ cells written in each of a constant fraction of them. The inner layer proves this bound for a single epoch, following \cite{ko_omega_2026}: if a query probes fewer cells of the epoch, we turn the data structure into a 2.5-round protocol whose probability of answering ``disjoint'' contradicts a communication lower bound. \Cref{sec:proof-main} gives the details.
+
+\subsubsection{The outer layer: the Chronogram method}
+
+The Chronogram method \cite{fredman_cell_1989} divides the insertions into $\ell$ epochs whose sizes grow geometrically going back in time. We number the epochs $\ell, \ell-1, \dots, 1$ in the order in which they occur, so that the larger epochs come first and epoch $1$ is the most recent. The main observation of Fredman and Saks is that we can decompose the cells by the epoch of their last write: let $C_i$ be the set of cells last written in epoch $i$. Each probe goes to at most one of the disjoint sets $C_1, \dots, C_\ell$, so for most epochs $i$, a random query probes only $O(t_q/\ell)$ cells of $C_i$ in expectation. We show that for a constant fraction of the epochs $i$, a random query must probe $\Omega(\log n/\log(t_u w))$ cells of $C_i$. With $\ell = \Theta(\log n/\log(t_u w))$, this gives $t_q = \Omega\big((\log n/\log(t_u w))^2\big)$.
+
+\paragraph{The hard distribution.}
+Recall that in multiphase Disjointness (\cref{prob:multiphase}), the query sets $S_1, \dots, S_m$ arrive first, the elements of $X$ are then inserted, and finally a query asks whether $S_q \cap X = \emptyset$. We choose disjoint blocks $B_1, \dots, B_\ell$ in $[n]$ and leave any remaining coordinates unused. In epoch $i$, $s_i = (t_u w)^{2i}$ random elements of $B_i$ are inserted, and every query set has $s_i$ random elements in $B_i$. In other words, this is the hard distribution of Babai, Frankl and Simon \cite{babai_complexity_1986} for Disjointness, two independent random sets of size about the square root of the universe, spread across the epochs: each block carries one copy of it, made slightly sparser so that the $\ell$ copies together meet with constant probability. Two features of this distribution matter.
+\begin{itemize}[leftmargin=*]
+  \item \emph{Recent epochs cannot record older ones.} The epoch sizes are geometric: going back in time, they grow by a factor $(t_u w)^2$. So the insertions after epoch $i$ number at most $s_{i-1} + s_{i-2} + \dots + s_1 \le 2 s_{i-1} = 2 s_i/(t_u w)^2$, and since each insertion writes at most $t_u$ cells of $w$ bits, they write only $O(s_i/(t_u w))$ bits. This is far too few to describe the $s_i$ elements inserted in epoch $i$, so a query that needs these elements must read cells of $C_i$. This is the key property of the Chronogram method.
+  \item \emph{Every epoch matters.} Block $B_i$ has $\ell s_i^2$ elements. By the birthday paradox, two random sets of size $s_i$ in a universe of size $\ell s_i^2$ meet with probability about $1/\ell$. So the answer is ``disjoint'' with constant probability, and each block can change it.
+\end{itemize}
+
+\subsubsection{The inner layer: the 2.5-round game}
+
+Suppose, for contradiction, that $t_q = o\big((\log n/\log(t_u w))^2\big)$, and fix an epoch $i$ in which a random query probes only $k = O(t_q/\ell)$ cells of $C_i$ in expectation. The idea of cell sampling, introduced to the Chronogram method by Larsen \cite{larsen_cell_2012}, is that a small random sample of $C_i$ then already suffices to answer a nontrivial fraction of the queries. If each cell of $C_i$ is sampled independently with probability $p = \Theta(1/(t_u w))$, then all $k$ cells of $C_i$ probed by a query are sampled with probability about $p^k$. Both $1/\ell$ and $\log(1/p)$ contribute a factor of $\log(t_u w)$, so
+\[ p^{k} \;\ge\; \exp\Big(-O\Big(\frac{t_q \log^2(t_u w)}{\log n}\Big)\Big) \;=\; n^{-o(1)}. \]
+This is the source of the quadratic form of the bound. To exploit it, we use the following variant of the 2.5-round multiphase communication game of \cite{ko_omega_2026}. Alice holds the query sets $S_1, \dots, S_m$, Bob holds $X$, and an omniscient adviser, Merlin, holds both. Merlin follows the prescribed message rule, supplying advice determined by the inputs.
+\begin{Protocol}
+\begin{itemize}[leftmargin=*]
+  \item \emph{Round 0 (Merlin to Bob).} Merlin sends Bob a message $U$.
+  \item \emph{Round 0.5 (Bob to Alice).} Bob sends Alice a message $\Phi$, which may depend on $U$, $X$ and his private randomness, but not on the query.
+  \item \emph{Round 1 (Alice to Bob).} A random query index $Q \in [m]$ is revealed to Alice only, and she sends Bob a message $A_Q$.
+  \item \emph{Round 2 (Bob).} Bob outputs whether $S_Q \cap X = \emptyset$, or FAIL.
+\end{itemize}
+\caption{The 2.5-round multiphase communication game (cf.\ \cite[Protocol~3]{ko_omega_2026})\label{prot:game}}
+\end{Protocol}
+\noindent This game is a restriction of \Patrascu's multiphase communication game, in which Alice and Bob both know the query and may then communicate freely. The required lower bound for \Patrascu's game remains open, while known bounds for more restricted games \cite{chattopadhyay_upper_2016,ko_adaptive_2020,dvorak_lower_2020} do not imply lower bounds for general data structures. The 2.5-round game sits in between. Bob's message $\Phi$ does not depend on the query, which makes the game amenable to information-theoretic analysis, and yet the game can still simulate a data structure.
+
+\paragraph{Simulation.}
+We turn the data structure into a protocol for the game as follows (Step~1, \cref{sec:step1}).
+\begin{itemize}[leftmargin=*]
+  \item Merlin's message $U$ is the list of all cells written in epochs $i, \dots, 1$, with their final contents.
+  \item Bob's message $\Phi$ consists of the elements of $X$ outside $B_i$, the contents of all cells written after epoch $i$, and each cell of $C_i$ independently with probability $p = \eps/(32 t_u w)$, for a small constant $\eps > 0$. With $\Phi$, Alice knows the whole memory except the unsampled cells of $C_i$.
+  \item Alice's message $A_Q$ is her simulation of query $Q$ on the memory she knows.
+  \item Bob checks $A_Q$ against $U$. Alice's simulation can only go wrong on unsampled cells of $C_i$, which are listed in $U$, so Bob detects every mistake. He outputs Alice's answer if $A_Q$ is consistent with $U$, and FAIL otherwise.
+\end{itemize}
+Every non-FAIL answer is therefore correct. Moreover, Alice's simulation is correct whenever all $k$ cells of $C_i$ that the query probes are sampled, which happens with probability about $p^k = n^{-o(1)}$.
+
+Verification is what distinguishes this protocol from the one-way games behind earlier bounds \cite{larsen_cell_2012,larsen_super-logarithmic_2025}. There, Alice answers on her own and cannot tell whether her simulation is correct, since an unsampled cell of $C_i$ looks to her like a cell that was not written in epoch $i$ at all; a failed simulation is indistinguishable from a successful one. Here, Bob knows exactly when the simulation fails.
+
+The protocol nevertheless reveals little about block $i$. Bob's message reveals at most $\eps s_i/4$ bits about $X \cap B_i$, a small fraction of its entropy, and Alice's simulation has $O(t_q w)$ bits. Merlin's list $U$ is long, but it is shared by all $m$ query sets, so it reveals little about the random query set $S_Q$. Yet Bob learns, with probability $n^{-o(1)}$, that $S_Q$ and $X$ are disjoint. The communication lower bound rules out this combination of small information loss and substantial probability of a certified ``disjoint'' answer.
+
+\subsubsection{From discrepancy to one-sided corruption}
+
+In \cite{ko_omega_2026}, Bob outputs a random guess when verification fails, and the contradiction comes from the protocol's advantage over random guessing. After conditioning on suitable message values and smoothing, the inputs have nearly full min-entropy and are nearly independent. For Inner Product the proof ends with a discrepancy bound: under every product distribution with nearly full min-entropy, the answer is nearly unbiased. That discrepancy property does not hold for Disjointness under the distributions needed here.
+
+Verification allows us to use a weaker, one-sided property. \cite[Remark~3.4]{ko_omega_2026} already relates detected failure to the protocol's acceptance probability. We exploit the certified answer itself: Bob outputs FAIL instead of guessing, and we condition on his returning ``disjoint''. Every answer he returns is correct. We therefore need only that every product distribution with nearly full min-entropy puts noticeable mass on intersecting pairs. This one-sided corruption bound does hold for Disjointness: for sets of size $\sqrt N$ in a universe of size $N$, it is the classic rectangle bound of Babai, Frankl and Simon \cite{babai_complexity_1986}, which we extend to our sparser sets in \cref{sec:corruption}. Thus a one-sided corruption bound compatible with the epoch distribution replaces discrepancy. Extending the argument to another block function would also require a suitable product hard distribution with constant probability of the accepted global answer.
+
+\subsubsection{The complete argument}
+
+Our proof proceeds in four steps. As in \cite{ko_omega_2026}, the first is a simulation, and the other three prove a communication lower bound.
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Simulation} (\cref{sec:step1}). A data structure violating the proposed bound yields a protocol for the game of \cref{prot:game} in which Bob outputs ``disjoint'' with probability $n^{-o(1)}$, and every answer he outputs is correct.
+  \item \textbf{A monochromatic near-rectangle} (\cref{sec:step2}). Among runs on which Bob returns ``disjoint'', choose a suitable value of the messages and auxiliary conditioning variables. Then restrict $S_Q\cap B_i$ to an event of constant conditional probability. After this smoothing step, the two block inputs have nearly full min-entropy and small mutual information. They are always disjoint because Bob's answer is certified.
+  \item \textbf{A nearly monochromatic rectangle} (\cref{cor:rect}). By Pinsker's inequality, replacing this distribution by the product of its marginals changes it little in total variation distance. The resulting rectangle therefore assigns little mass to intersecting pairs.
+  \item \textbf{Corruption} (\cref{cor:product}). Every product of two distributions on sparse subsets of $B_i$ with nearly full min-entropy puts mass $\Omega(1/\ell)$ on intersecting pairs, a contradiction.
+\end{enumerate}
+The data structure may also be randomized, with expected query time, as in \cite{larsen_super-logarithmic_2025}: we fix its coins, and Alice stops each simulation after $8 t_q$ probes, which costs only a constant factor.
+
+\paragraph{Organization.}
+\Cref{sec:prelim} gives the model conventions and information-theoretic preliminaries. \Cref{sec:proof-main} proves the main theorem using the sparse-set corruption bound established in \cref{sec:corruption}. \Cref{sec:graphs} contains the dynamic reductions and the streaming application.
+
+\input{preliminaries}
+
+% =====================================================================
+\section{Main proof}\label{sec:proof-main}
+% =====================================================================
+
+In this section, we prove our main theorem, the formal version of \cref{thm:main-informal}.
+
+\begin{theorem}[Main theorem]\label{thm:main}
+Every zero-error cell-probe data structure for insert-only multiphase Disjointness with $m = n$ query sets, word size $w = \Theta(\log n)$, worst-case update time $t_u$ and expected query time $t_q$ has
+\[ t_q = \Omega\!\left(\left(\frac{\log n}{\log(t_u w)}\right)^{2}\right). \]
+In particular, $\max(t_u,t_q)=\Omega\big((\log n/\log\log n)^2\big)$.
+\end{theorem}
+
+We follow the outline in \cref{sec:overview}. After defining the hard distribution, we turn a data structure violating the bound into a 2.5-round protocol (\cref{sec:step1}). The communication lower bound in \cref{sec:step2} rules out this protocol, using the corruption bound proved in \cref{sec:corruption}.
+
+\subsection{The hard distribution}\label{sec:dist}
+
+Let $\beta := (t_u w)^4$, and choose the largest integer $\ell\ge1$ such that $\ell\sum_{i=1}^{\ell}\beta^i\le n$. The bound is trivial when $t_u w>n^{1/95}$, so we work in the complementary regime; in particular, such an $\ell$ exists. Choose pairwise disjoint blocks $B_1,\dots,B_\ell\subseteq[n]$ with
+\[ \abs{B_i} = n_i := \ell\beta^i, \qquad\text{and let}\qquad s_i := \sqrt{n_i/\ell} = \beta^{i/2}. \]
+The remaining coordinates occur in neither the query sets nor $X$. We keep $m=n$ query sets. Since $t_u$ and $w$ are integers, all block and set sizes are integers.
+Epochs are indexed backward in time: epoch $\ell$ comes first and epoch $1$ comes last. Under the distribution $\cD$ of $(\vS, X)$, independently:
+\begin{itemize}[leftmargin=*]
+  \item each query set $S_j$, $j \in [m]$, consists of $s_i$ uniformly random elements of each block $B_i$; write $S_j^{(i)} := S_j \cap B_i$ and $\vS := (S_1,\dots,S_m)$;
+  \item in epoch $i$, $s_i$ uniformly random elements of $B_i$ are inserted into $X$, in increasing order. We write $X^{(i)} := X \cap B_i$ for the set inserted in epoch $i$, $X^{(>i)} := X \cap (B_{i+1} \cup \dots \cup B_\ell)$, and $X^{(\ne i)} := X \setminus B_i$.
+\end{itemize}
+The query index $Q$ is uniform in $[m]$ and independent of $(\vS, X)$. We write $\Pr_{\cD,Q}$ and $\E_{\cD,Q}$ for probability and expectation over $(\vS, X) \sim \cD$ and $Q$.
+In each block, $S_Q$ and $X$ share $s_i^2/n_i = 1/\ell$ elements in expectation over $\cD$ and $Q$; since the blocks are independent, $S_Q$ and $X$ are disjoint with probability at least $1/4$ (\cref{clm:params}(d) and \cref{fig:hard-dist}). The \emph{Chronogram epochs} are $\cI := \{ i \in [\ell] : i \ge 2(\ell+2)/3 \}$; any range of $\Omega(\ell)$ epochs with $s_i \ge n^{\Omega(1)}$ would do.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=0.42cm, y=0.42cm,
+  lab/.style={font=\small},
+  one/.style={fill=black!20}]
+  % \blockrow{start}{y}{bits}: draw one row of bits starting at x=start
+  \providecommand{\bitrow}[3]{%
+    \foreach \b [count=\c from 0] in {#3} {%
+      \ifnum\b=1 \fill[one] (#1+\c,#2) rectangle (#1+\c+1,#2+1);\fi
+      \draw (#1+\c,#2) rectangle (#1+\c+1,#2+1);
+      \node[font=\scriptsize] at (#1+\c+0.5,#2+0.5) {\b};}}
+  % row labels
+  \node[lab, anchor=east] at (-0.2,1.5) {$X$};
+  \node[lab, anchor=east] at (-0.2,0.5) {$S_q$};
+  % B_ell: 14 coordinates, 3 ones each, disjoint
+  \bitrow{0}{1}{0,1,0,0,0,0,1,0,0,0,0,0,1,0}
+  \bitrow{0}{0}{0,0,0,1,0,0,0,0,1,0,1,0,0,0}
+  \draw[very thick] (0,0) rectangle (14,2);
+  \node[lab] at (7,-0.6) {$B_\ell$ ($n_\ell$ coordinates)};
+  % B_{ell-1}: 8 coordinates, 2 ones each
+  \bitrow{15}{1}{0,0,1,0,0,0,0,1}
+  \bitrow{15}{0}{1,0,0,0,0,1,0,0}
+  \draw[very thick] (15,0) rectangle (23,2);
+  \node[lab] at (19,-0.6) {$B_{\ell-1}$};
+  \node at (24.5,1) {$\cdots$};
+  % B_1: 4 coordinates, 1 one each
+  \bitrow{26}{1}{0,0,1,0}
+  \bitrow{26}{0}{0,1,0,0}
+  \draw[very thick] (26,0) rectangle (30,2);
+  \node[lab] at (28,-0.6) {$B_1$};
+  % time arrow
+  \draw[->, thick] (0,3) -- (30,3);
+  \node[lab, anchor=south] at (2.2,3.05) {epoch $\ell$ first};
+  \node[lab, anchor=south] at (15,3.05) {time};
+  \node[lab, anchor=south] at (27.8,3.05) {epoch $1$ last};
+  % parameters
+  \path (-1.0,0) (31.0,0); % symmetric bounding box around the labels on the left
+  \node[lab] at (15,-1.9) {In each block $B_i$: $s_i$ ones in each row, placed independently at random; \quad $n_i = \ell\beta^i$, \ $s_i = \sqrt{n_i/\ell}$.};
+\end{tikzpicture}
+\caption{The hard distribution (not to scale), with $X$ and $S_q$ written as characteristic vectors. The ones of $X$ in block $B_i$ are inserted during epoch $i$. Block sizes grow by a factor $\beta = (t_u w)^4$ going back in time. In each block, the expected number of common ones is $s_i^2/n_i = 1/\ell$, so $S_Q$ and $X$ are disjoint with constant probability.}
+\label{fig:hard-dist}
+\end{figure}
+
+The following bounds summarize the parameters of the hard distribution.
+
+\begin{claim}[Parameters]\label{clm:params}
+The hard distribution has the following properties.
+\begin{enumerate}[label=(\alph*)]
+  \item $\ell = \Theta(\log n/\log(t_u w))$, $\ell \ge 20$, and $\abs{\cI} \ge (\ell - 4)/3$.
+  \item For $i \in \cI$: $s_i \ge n^{1/3}$.
+  \item $s_i/s_{i-1} = \sqrt\beta = (t_u w)^2$, $\sum_{j < i} s_j \le 2 s_{i-1}$, and $s_\ell \le \sqrt n$.
+  \item $\E_{\cD,Q} \left[ \abs{S_Q^{(i)} \cap X^{(i)}} \right] = s_i^2/n_i = 1/\ell$ for every $i$, and $\Pr_{\cD,Q}[S_Q \cap X = \emptyset] \ge (1 - 1/\ell)^\ell \ge 1/4$ for $\ell \ge 2$.
+\end{enumerate}
+\end{claim}
+\begin{proof}
+We verify the parameter bounds, including the unused coordinates.
+\begin{enumerate}[label=(\alph*), leftmargin=*]
+  \item By maximality of $\ell$ and $\beta\ge2$,
+  \[
+  \ell\beta^\ell\le n < (\ell+1)\sum_{j=1}^{\ell+1}\beta^j
+  \le 2(\ell+1)\beta^{\ell+1}.
+  \]
+  Thus $\ell\le\log n$, and $\ell=\Theta(\log n/\log\beta)$. Also $\abs{\cI}\ge \ell-2(\ell+2)/3=(\ell-4)/3$. Since $t_u w\le n^{1/95}$, we have $\log\beta\le(4/95)\log n$ and
+  \[
+  \ell > \frac{\log n-\log(2(\ell+1))}{\log\beta}-1
+  \ge \frac{95}{4}\left(1-\frac{\log(2(\log n+1))}{\log n}\right)-1
+  \ge20.
+  \]
+  \item Since $w=\Theta(\log n)$ and $\ell\le\log n$, we have $\beta\ge2(\ell+1)$. For $i\ge2(\ell+2)/3$, $s_i=\beta^{i/2}\ge(\beta^{\ell+2})^{1/3}>(\beta n/(2(\ell+1)))^{1/3}\ge n^{1/3}$.
+  \item The ratio is immediate; $\sum_{j<i} s_j \le s_{i-1}\sum_{r \ge 0} \beta^{-r/2} \le 2 s_{i-1}$ since $\beta \ge 4$; and $s_\ell^2 = n_\ell/\ell \le n$.
+  \item Each element of $B_i$ lies in $S_Q^{(i)}$ with probability $s_i/n_i$ and in $X^{(i)}$ with probability $s_i/n_i$, independently, so the expectation is $n_i (s_i/n_i)^2 = 1/\ell$. By Markov, block $i$ is disjoint with probability at least $1 - 1/\ell$, and the blocks are independent. \qedhere
+\end{enumerate}
+\end{proof}
+
+\paragraph{Setup.}
+Fix the random tape by averaging over the hard distribution. We may assume that $t_u w \le n^{1/95}$ and $t_q \le \log^2 n$, since otherwise the bound is trivial. So the data structure is deterministic, with zero error and worst-case update time $t_u$, and the number $T(q)$ of cells read by a query $q \in [m]$ is a function of $(\vS, X)$ with $\E_{\cD,Q}[T(Q)] \le t_q$. By \cref{clm:params}, $\ell \ge 20$ and $s_i \ge n^{1/3}$ for $i \in \cI$. Since $w = \Theta(\log n)$, also $t_u w \ge 64/\eps$, where $\eps = 1/40$ is the constant of \cref{lem:corruption}.
+
+\paragraph{Epochs.}
+The updates are processed in decreasing order of the epoch index, so the larger epochs come first. We follow the notation and the setup of \cite{larsen_super-logarithmic_2025}. For $i \in \cI$, let $M_{>i}$ be the memory after Phase I and epochs $\ell, \dots, i+1$; it is a function of $(\vS, X^{(>i)})$. For $j \in [\ell]$, let $C_j$ be the set of cells last written in epoch $j$, and let $C_{<j} := \bigcup_{j' < j} C_{j'}$ be the set of cells written after epoch $j$. The sets $C_1, \dots, C_\ell$ are pairwise disjoint. Let $t_j(q)$ be the number of distinct cells of $C_j$ read by query $q$, so that
+\[ \sum_{j \in [\ell]} t_j(q) \;\le\; T(q), \qquad\text{and let}\qquad \tau_j \;:=\; \E_{\cD,Q}\big[t_j(Q)\big]. \]
+
+\subsection{Simulation theorem}\label{sec:step1}
+
+The following theorem converts a data structure into a protocol for the 2.5-round game of \cref{prot:game} (cf.\ \cite[Protocol~3]{ko_omega_2026}), in which Bob verifies Alice's simulation of the query against the actual memory. We adapt the protocol of \cite[Protocol~4]{ko_omega_2026} and the analysis of \cite[Theorem~3.2]{ko_omega_2026}; numbered references to that work use arXiv version~2. The main difference is Bob's output when the simulation fails: in \cite{ko_omega_2026}, he outputs $\mathrm{FAIL}$ together with an independent random guess, while here he outputs only $\mathrm{FAIL}$. In addition, the epoch $i$ is fixed in advance rather than chosen by Merlin, Merlin's message lists only the cells written in epochs $i, \dots, 1$ rather than all updates, Bob sends Alice all elements of $X$ outside $B_i$, and, since $t_q$ bounds the query time only on average, Alice stops her simulation after $8 t_q$ probes.
+
+Let $U$ consist of two lists, of the cells of $C_i$ and of the cells of $C_{<i}$, each cell with its final content, that is, its content after Phase~II. Let $p := \eps/(32\, t_u w)$. Bob's private randomness $R_{\mathrm{Bob}}$ consists of an independent bit $R_a$ with $\Pr[R_a = 1] = p$ for every cell $a$, and $(\vS, X)$, $Q$ and $R_{\mathrm{Bob}}$ are mutually independent. The length $\abs{\cdot}$ of a message is measured in bits, padded to a fixed length, so that a message of length $\lambda$ takes at most $2^\lambda$ values.
+
+\begin{theorem}[Simulation theorem]\label{thm:too-good}
+For every $i \in \cI$ there is a 2.5-round protocol $G_i$ for the game of \cref{prot:game}, in which Merlin sends $U$ and Bob's message has the form $\Phi = (X^{(\ne i)}, \Psi)$, with the following properties, where $B_Q$ is the indicator that Bob outputs ``disjoint'' and $\rho_1 := \Pr_{\cD, R_{\mathrm{Bob}}, Q}[B_Q = 1]$.
+\begin{enumerate}[label=(\alph*)]
+  \item \emph{(Zero error)} If Bob does not output $\mathrm{FAIL}$, his output is the correct answer. In particular, $B_Q = 1$ implies $S_Q \cap X = \emptyset$.
+  \item \emph{(Lengths of $U$ and $\Psi$)} $\abs{U} \le 5\, t_u w\, s_i$ and $\abs{\Psi} \le \eps s_i/4$.
+  \item \emph{(Length of Alice's messages)} $\abs{A_q} \le 17\, t_q w$ for every $q \in [m]$.
+  \item \emph{(Probability of answering disjoint)} $\rho_1 \ge \frac18\, p^{8\tau_i} - e^{-n^{1/4}/3}$.
+  \item \emph{(Structure)} $\Psi$ is a function of $(U, R_{\mathrm{Bob}})$, each $A_q$ is a function of $(\vS, \Phi)$, and $B_Q$ is a function of $(\Psi, A_Q, U)$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+We simulate the data structure by the 2.5-round protocol $G_i$ of \cref{def:game}. A verified transcript may have either answer; $B_Q=1$ denotes only a verified ``disjoint'' answer. Part (e) is immediate from \cref{def:game}: Bob computes $\Psi$ from $U$ and $R_{\mathrm{Bob}}$, Alice computes $A_q$ from $\vS$ and $\Phi$, and Bob's decision reads only $\Psi$, which records whether he aborted, $A_Q$, which records whether the run finished and its output, and the final contents listed in $U$.
+
+\begin{figure}[!t]
+\centering
+\fbox{\begin{minipage}{0.97\textwidth}
+\begin{itemize}[leftmargin=*]
+  \item Alice holds $\vS$. Bob holds $X$ and $R_{\mathrm{Bob}}$. Merlin holds $\vS$ and $X$.
+  \item Merlin sends $U$ to Bob.
+  \item As the $0.5$-round message, Bob lets $\Csam := \{a \in C_i : R_a = 1\}$. If $\abs{\Csam} > 2p\, t_u s_i$, Bob aborts: he sets $\Psi := \bot$, and outputs $\mathrm{FAIL}$ at the end. Otherwise $\Psi$ lists the cells of $C_{<i} \cup \Csam$ with their final contents. Bob sends $\Phi := (X^{(\ne i)}, \Psi)$ to Alice. The message depends on $U$, $X$ and $R_{\mathrm{Bob}}$, but not on the query $Q$.
+  \item The query $Q \in [m]$ is then revealed to Alice. Alice computes $M_{>i}$ from $\vS$ and $X^{(>i)}$, and runs the query algorithm on $Q$. She answers a probe to a cell listed in $\Psi$ with its listed content, and a probe to any other cell with its content in $M_{>i}$. She stops the run if it has not finished after $\lfloor8 t_q\rfloor$ probes. She sends the transcript
+  \[ A_Q \;:=\; \big((a_1, c_1), \dots, (a_r, c_r), z_{out}\big), \qquad r \le \lfloor8 t_q\rfloor, \]
+  where $a_k$ is the $k$-th probed cell, $c_k$ the content she used, and $z_{out}$ the output, or a mark that the run was stopped.
+  \item Bob \emph{verifies} $A_Q$ if (i) he did not abort, (ii) the run recorded in $A_Q$ finished, and (iii) $c_k$ is the final content of $a_k$ for every $k$ with $a_k \in C_i \cup C_{<i}$; he reads these final contents off $U$. If verification succeeds, he outputs $z_{out}$; otherwise he outputs $\mathrm{FAIL}$.
+\end{itemize}
+\end{minipage}}
+\refstepcounter{Protocol}\label{def:game}
+\vspace{4pt}
+{\small Protocol \theProtocol: Simulation protocol $G_i$ (cf.\ \cite[Protocol~4]{ko_omega_2026})}
+\end{figure}
+
+\paragraph{Cost of the protocol.} Each cell is encoded by its $w$-bit address and $w$-bit content. We encode list lengths and the abort flag using $O(w)$ additional bits, and pad messages to fixed lengths. Merlin's message $U$ lists the cells of $C_i$ and of $C_{<i}$. Here $\abs{C_i} \le t_u s_i$, since each of the $s_i$ insertions of epoch $i$ writes at most $t_u$ cells, and similarly $\abs{C_{<i}} \le t_u \sum_{j<i} s_j \le 2 t_u s_{i-1}$ by \cref{clm:params}(c). Bob's list $\Psi$ has at most $\abs{C_{<i}} + 2p\, t_u s_i$ cells. Since $s_{i-1} = s_i/(t_u w)^2$ and $t_u w \ge 64/\eps$,
+\begin{align*}
+\abs{U} \;&\le\; 2w\big(\abs{C_i} + \abs{C_{<i}}\big) + O(w) \;\le\; 2w\big(t_u s_i + 2 t_u s_{i-1}\big) + O(w) \;\le\; 5\, t_u w\, s_i, \\
+\abs{\Psi} \;&\le\; 2w\big(2 t_u s_{i-1} + 2p\, t_u s_i\big) + O(w) \;=\; \frac{4 s_i}{t_u w} + \frac{\eps s_i}{8} + O(w) \;\le\; \frac{\eps s_i}{4}.
+\end{align*}
+Alice's transcript records at most $8 t_q$ probes, together with the number of probes and the output or the stop mark, so
+\[ \abs{A_q} \;\le\; 16\, t_q w + \lceil\log(\lfloor8 t_q\rfloor + 1)\rceil + 2 \;\le\; 17\, t_q w. \]
+The header costs are absorbed since $s_i\ge n^{1/3}$ and $w=\Theta(\log n)$. This proves (b) and (c).
+
+\paragraph{Verification and disjoint answers.} We first prove that verification certifies the true execution and succeeds when the sampled cells cover that execution, provided Bob does not abort and the query finishes within the probe limit. We then restrict to disjoint inputs to prove (d).
+
+\begin{claim}[Verification]\label{lem:simulation}
+Fix $(\vS, X)$ and $q \in [m]$. In (b) and (c), the probability is over $R_{\mathrm{Bob}}$.
+\begin{enumerate}[label=(\alph*)]
+  \item If Bob verifies $A_q$, then $A_q$ is the true execution of query $q$. In particular, its output is $\DISJ(S_q, X)$.
+  \item $\Pr_{R_{\mathrm{Bob}}}[\text{Bob aborts}] \le e^{-n^{1/4}/3}$.
+  \item If $T(q) \le 8 t_q$, then $\Pr_{R_{\mathrm{Bob}}}[\text{Bob verifies } A_q] \ge p^{t_i(q)} - e^{-n^{1/4}/3}$.
+\end{enumerate}
+\end{claim}
+\begin{proof}
+(a) If Bob verifies $A_q$, then every content Alice used is the final content. For a cell of $C_i \cup C_{<i}$, Bob checked this. Any other cell is not listed in $\Psi$ and is not written during epochs $i, \dots, 1$, so Alice used its content in $M_{>i}$, which is final. Hence her run is the true execution of query $q$, and its output is $\DISJ(S_q, X)$.
+
+(b) $\abs{\Csam}$ is a sum of $\abs{C_i} \le t_u s_i$ independent indicators with mean $p$ each. By the Chernoff bound, applied with the upper bound $p\, t_u s_i$ on the mean,
+\[ \Pr_{R_{\mathrm{Bob}}}\left[\abs{\Csam} > 2p\, t_u s_i\right] \;\le\; e^{-p\, t_u s_i/3}, \]
+and $p\, t_u s_i = \eps s_i/(32 w) \ge n^{1/4}$.
+
+(c) Let $P_q \subseteq C_i$ be the set of the $t_i(q)$ cells of $C_i$ probed by the true execution of query $q$. If Bob does not abort and $P_q \subseteq \Csam$, then every cell that the true execution probes is either listed in $\Psi$ or outside $C_i \cup C_{<i}$, so Alice reproduces the true execution, which finishes within $T(q) \le 8 t_q$ probes, and verification succeeds. Since $\Pr_{R_{\mathrm{Bob}}}[P_q \subseteq \Csam] = p^{t_i(q)}$, a union bound with (b) gives (c).
+\end{proof}
+
+Part (a) of the theorem follows from \cref{lem:simulation}(a), since Bob outputs $\mathrm{FAIL}$ unless he verifies $A_Q$. It remains to show (d). Let $F$ be the event that $S_Q \cap X = \emptyset$ and $T(Q) \le 8 t_q$; it is determined by $(\vS, X, Q)$. By Markov's inequality, $\Pr_{\cD,Q}[T(Q) > 8 t_q] \le 1/8$, and by \cref{clm:params}(d), $\Pr_{\cD,Q}[S_Q \cap X = \emptyset] \ge 1/4$, so $\Pr_{\cD,Q}[F] \ge 1/8$. If $F$ holds and Bob verifies $A_Q$, then the recorded output is ``disjoint'' by \cref{lem:simulation}(a), so $B_Q = 1$. Since $R_{\mathrm{Bob}}$ is independent of $(\vS, X, Q)$, \cref{lem:simulation}(c), applied for each fixed $(\vS, X, Q)$, and then the convexity of $x \mapsto p^x$ (with Jensen's inequality) give
+\[ \rho_1 \;\ge\; \E_{\cD,Q}\Big[\mathbf{1}_F \cdot \big(p^{t_i(Q)} - e^{-n^{1/4}/3}\big)\Big] \;\ge\; \Pr_{\cD,Q}[F] \cdot p^{\E_{\cD,Q}[t_i(Q) | F]} - e^{-n^{1/4}/3}. \]
+Since $t_i \ge 0$, $\E_{\cD,Q}[t_i(Q) | F] \le \tau_i/\Pr_{\cD,Q}[F] \le 8\tau_i$, which gives (d).
+\end{proof}
+
+\noindent As in \cite[Remark~3.4]{ko_omega_2026}, the protocol detects simulation failure: whenever Bob does not output $\mathrm{FAIL}$, he has verified Alice's transcript against $U$, and his output is correct. The remaining runs play no role in the argument: Steps 2--4 use only the event $B_Q = 1$, on which the answer is ``disjoint'' with certainty.
+
+The next corollary quantifies the probability of answering ``disjoint'' when a query reads few cells from epoch $i$.
+
+\begin{corollary}[Choice of parameters]\label{cor:too-good}
+If $\tau_i = o\big(\log n/\log(t_u w)\big)$, then $\rho_1 \ge n^{-o(1)}$.
+\end{corollary}
+\begin{proof}
+Since $t_u w \ge 64/\eps$, $\log(1/p) = \log(32\, t_u w/\eps) \le 2\log(t_u w)$, so $p^{8\tau_i} \ge 2^{-16\tau_i\log(t_u w)} = n^{-o(1)}$. By \cref{thm:too-good}(d), $\rho_1 \ge \frac18 n^{-o(1)} - e^{-n^{1/4}/3} \ge n^{-o(1)}$.
+\end{proof}
+
+\subsection{Communication lower bound}\label{sec:step2}
+
+We prove that $\rho_1<n^{-1/6}$ for every $i\in\cI$ (\cref{lem:comm-lb}). Following \cite{ko_omega_2026,ko_adaptive_2020}, we collect the relevant messages and auxiliary variables into $Z$, including Bob's output $B_Q$. If disjoint answers occur too often, we can choose a value $Z=(z,1)$ and then restrict the query-side input $S_Q^{(i)}$ to an event $E$ of constant conditional probability. Under this joint conditioning, both block inputs have nearly full min-entropy and their mutual information is small. The smoothing event $E$ depends only on the query-side input once $z$ is fixed.
+
+Every pair in the resulting distribution is disjoint, by \cref{thm:too-good}(a). Thus it is a monochromatic near-rectangle (\cref{def:rect}). The one-sided corruption bound rules out this distribution after we pass to the product of its marginals; this replaces the discrepancy step for Inner Product in \cite{ko_omega_2026}.
+
+Fix $i \in \cI$ with $\rho_1 > 0$. Following \cite{ko_omega_2026}, we take
+\[ Z \;:=\; \big(Z_{\mathrm{alice}}, B_Q\big), \qquad Z_{\mathrm{alice}} \;:=\; \big(\Phi, \Aall, Q, S_{<Q}\big), \]
+where $S_{<Q} := (S_1, \dots, S_{Q-1})$, and $\Aall := (A_1, \dots, A_m)$ with $A_q$ the transcript that Alice sends when the query is $q$. The vector $\Aall$ is never transmitted; it is an analysis variable that permits direct sum over the query sets. The prefix $S_{<Q}$ supplies the conditioning required by the chain rule. As in \cite{ko_omega_2026}, $Z$ includes these transcripts but not Merlin's message $U$. By \cref{thm:too-good}(e), $\Aall$ is a function of $(\vS, \Phi)$, and $B_Q$ is a function of $(Z_{\mathrm{alice}}, U)$, since $\Psi$ is part of $\Phi$ and $A_Q$ is determined by $\Aall$ and $Q$. We only consider values of $Z$ with $B_Q = 1$, and write them as $(z, 1)$, where $z$ is a value of $Z_{\mathrm{alice}}$.
+
+We use two facts throughout. First, Merlin's message is short compared to the number $m = n$ of query sets: by \cref{thm:too-good}(b) and \cref{fact:basic}(a),
+\begin{equation}\label{eq:HU}
+H(U) \;\le\; 5\, t_u w\, s_i \;\le\; n^{3/5},
+\end{equation}
+since $s_i \le s_\ell \le \sqrt n$ (\cref{clm:params}(c)) and $t_u w \le n^{1/95}$. Second, the following standard direct-sum identity holds.
+
+\begin{claim}[Direct sum]\label{clm:direct-sum}
+For any random variables $V$ and $W$ that are functions of $(\vS, X, R_{\mathrm{Bob}})$,
+\[ I\big(S_Q; W \bigm| V, Q, S_{<Q}\big) \;=\; \frac1m\, I\big(\vS; W \bigm| V\big). \]
+\end{claim}
+\begin{proof}
+Since $Q$ is uniform and independent of $(\vS, X, R_{\mathrm{Bob}})$, \cref{fact:basic}(c) and the chain rule (\cref{fact:chain}(a)) give
+\[ I\big(S_Q; W \bigm| V, Q, S_{<Q}\big) \;=\; \frac1m \sum_{q \in [m]} I\big(S_q; W \bigm| V, S_{<q}\big) \;=\; \frac1m\, I\big(\vS; W \bigm| V\big). \qedhere \]
+\end{proof}
+
+\subsubsection{Information about \texorpdfstring{$S_Q$}{S\_Q}}
+
+We first bound the divergence of the conditional query-side distribution from uniform, and then obtain high min-entropy by smoothing. Although $Z_{\mathrm{alice}}$ contains all $m$ Alice transcripts, they carry only $O(t_qw)$ bits about a random $S_Q$ on average. As in \cite{ko_omega_2026}, this yields a high-min-entropy distribution after restricting $S_Q^{(i)}$ to a likely event $E$.
+
+\begin{proposition}[The query side]\label{prop:S-entropy}
+If $\rho_1 \ge n^{-1/6}$, then
+\[ \Pr_{z \sim Z_{\mathrm{alice}}|_{B_Q=1}}\left[\, \exists E \subseteq \binom{B_i}{s_i}:\;
+\begin{aligned}
+&\Pr\big[S_Q^{(i)} \in E \bigm| Z = (z, 1)\big] \;\ge\; \frac34 \quad\text{and} \\
+&\Hmin\big(S_Q^{(i)} \bigm| Z = (z, 1),\, S_Q^{(i)} \in E\big) \;\ge\; \log\binom{n_i}{s_i} - 32\, n^{1/5}
+\end{aligned}
+\,\right] \;\ge\; \frac34. \]
+\end{proposition}
+\begin{proof}
+First we upper bound $I\big(S_Q^{(i)}; Z_{\mathrm{alice}}, B_Q\big)$. Since $S_Q^{(i)}$ is part of $S_Q$, and $S_Q$ is independent of $(Q, S_{<Q})$, the chain rule (\cref{fact:chain}) gives
+\[ I\big(S_Q^{(i)}; Z_{\mathrm{alice}}, B_Q\big) \;\le\; I\big(S_Q; \Phi, \Aall, Q, S_{<Q}, B_Q\big) \;=\; I\big(S_Q; \Phi, \Aall, B_Q \bigm| Q, S_{<Q}\big). \]
+Since $B_Q$ is a function of $(\Phi, \Aall, Q, U)$, the chain rule and \cref{clm:direct-sum} (with $V$ constant) give
+\[ I\big(S_Q; \Phi, \Aall, B_Q \bigm| Q, S_{<Q}\big) \;\le\; I\big(S_Q; \Phi, \Aall, U \bigm| Q, S_{<Q}\big) \;=\; \frac1m\, I\big(\vS; \Phi, \Aall, U\big). \]
+By the chain rule and \cref{fact:basic},
+\[ I\big(\vS; \Phi, \Aall, U\big) \;=\; I\big(\vS; \Phi, U\big) + I\big(\vS; \Aall \bigm| \Phi, U\big) \;\le\; H(U) + H(\Aall), \]
+where $I(\vS; \Phi, U) \le I(\vS; X^{(\ne i)}, R_{\mathrm{Bob}}, U) = I(\vS; U | X^{(\ne i)}, R_{\mathrm{Bob}}) \le H(U)$ by \cref{fact:basic}(e) and the chain rule, since $\Psi$ is a function of $(U, R_{\mathrm{Bob}})$ (\cref{thm:too-good}(e)) and $\vS$ is independent of $(X^{(\ne i)}, R_{\mathrm{Bob}})$. By \eqref{eq:HU} and $m = n$, $H(U)/m \le n^{-2/5}$, and by \cref{thm:too-good}(c) and \cref{fact:basic}(a), $H(\Aall)/m \le 17 t_q w$. Since $t_q \le \log^2 n$ and $w = \Theta(\log n)$,
+\[ I\big(S_Q^{(i)}; Z_{\mathrm{alice}}, B_Q\big) \;\le\; n^{-2/5} + 17 t_q w \;=\; O(\log^3 n). \]
+Next we condition on $B_Q = 1$, an event of probability $\rho_1$. Let $\cU$ be the uniform distribution on $\binom{B_i}{s_i}$, which is the distribution of $S_Q^{(i)}$. By \cref{fact:kl-mi}, and since divergence is nonnegative (\cref{fact:basic}(d)),
+\begin{align*}
+I\big(S_Q^{(i)}; Z_{\mathrm{alice}}, B_Q\big) \;&=\; \E_{(z, b) \sim (Z_{\mathrm{alice}}, B_Q)}\Big[D\big(S_Q^{(i)}|_{Z = (z, b)} \,\big\|\, \cU\big)\Big] \\
+\;&\ge\; \rho_1 \cdot \E_{z \sim Z_{\mathrm{alice}}|_{B_Q=1}}\Big[D\big(S_Q^{(i)}|_{Z = (z, 1)} \,\big\|\, \cU\big)\Big].
+\end{align*}
+Hence, since $\rho_1 \ge n^{-1/6}$,
+\[ \E_{z \sim Z_{\mathrm{alice}}|_{B_Q=1}}\Big[D\big(S_Q^{(i)}|_{Z = (z, 1)} \,\big\|\, \cU\big)\Big] \;\le\; \frac{O(\log^3 n)}{\rho_1} \;\le\; n^{1/5}. \]
+Finally, by Markov's inequality, $D\big(S_Q^{(i)}|_{Z = (z, 1)} \,\|\, \cU\big) \le 4 n^{1/5}$ with probability at least $3/4$ over $z \sim Z_{\mathrm{alice}}|_{B_Q=1}$. For such $z$, \cref{fact:smooth}, applied to the distribution of $S_Q^{(i)}$ given $Z = (z, 1)$ with $\cS = \binom{B_i}{s_i}$, $t = 4 n^{1/5}$ and $\alpha = 4$, gives the desired set $E$.
+\end{proof}
+
+\subsubsection{Information about \texorpdfstring{$X$}{X}}
+
+Next, we show that conditioning on $Z = (z, 1)$ costs little min-entropy of $X^{(i)}$. The only information about $X^{(i)}$ in $Z_{\mathrm{alice}}$ is Bob's message $\Psi$, which is short, and conditioning on $B_Q = 1$ costs $\log(1/\rho_1)$ more bits.
+
+\begin{proposition}[The update side]\label{prop:X-leak}
+\[ \Pr_{z \sim Z_{\mathrm{alice}}|_{B_Q=1}}\left[\, \Hmin\big( X^{(i)} \bigm| Z = (z, 1) \big) \;\ge\; \log\binom{n_i}{s_i} - \frac{\eps s_i}{4} - \log\frac{1}{\rho_1} - 2 \,\right] \;\ge\; \frac34. \]
+\end{proposition}
+\begin{proof}
+First we lower bound $\tHmin\big(X^{(i)} \bigm| Z_{\mathrm{alice}}\big)$. The set $X^{(i)}$ is uniform on $\binom{B_i}{s_i}$ and independent of $(\vS, X^{(\ne i)}, Q)$, and $Z_{\mathrm{alice}}$ is a function of $(\Psi, \vS, X^{(\ne i)}, Q)$ by \cref{thm:too-good}(e). By \cref{fact:avg-minent}(c), and then (a) with $\abs{\Psi} \le \eps s_i/4$ (\cref{thm:too-good}(b)),
+\[ \tHmin\big(X^{(i)} \bigm| Z_{\mathrm{alice}}\big) \;\ge\; \tHmin\big(X^{(i)} \bigm| \Psi, \vS, X^{(\ne i)}, Q\big) \;\ge\; \log\binom{n_i}{s_i} - \frac{\eps s_i}{4}. \]
+Next we condition on $B_Q = 1$, an event of probability $\rho_1$. By \cref{fact:event},
+\[ \tHmin\big(X^{(i)} \bigm| Z_{\mathrm{alice}}, B_Q {=} 1\big) \;\ge\; \tHmin\big(X^{(i)} \bigm| Z_{\mathrm{alice}}\big) - \log\frac{1}{\rho_1} \;\ge\; \log\binom{n_i}{s_i} - \frac{\eps s_i}{4} - \log\frac{1}{\rho_1}, \]
+where the left side is the average min-entropy with respect to the distribution conditioned on $B_Q = 1$:
+\[ \tHmin\big(X^{(i)} \bigm| Z_{\mathrm{alice}}, B_Q {=} 1\big) \;=\; -\log \E_{z \sim Z_{\mathrm{alice}}|_{B_Q=1}}\Big[2^{-\Hmin(X^{(i)} \,|\, Z = (z, 1))}\Big]. \]
+Finally, by \cref{fact:avg-minent}(b) with $r = 2$, applied to this distribution, $\Hmin(X^{(i)} | Z = (z, 1))$ is at least the left side minus $2$ with probability at least $1 - 2^{-2} = 3/4$ over $z \sim Z_{\mathrm{alice}}|_{B_Q=1}$.
+\end{proof}
+
+\subsubsection{Correlation between \texorpdfstring{$S_Q$}{S\_Q} and \texorpdfstring{$X$}{X}}
+
+Finally, we show that $S_Q^{(i)}$ and $X^{(i)}$ are weakly correlated after conditioning on $Z = (z, 1)$. Merlin's message $U$ is long, but it is shared by all $m$ query sets, so it reveals little about the random query set $S_Q$. Since $B_Q$ is a function of $(Z_{\mathrm{alice}}, U)$, conditioning on it adds no correlation beyond what $U$ already carries. This is again a standard technique from \cite{ko_adaptive_2020} and \cite{ko_omega_2026}.
+
+\begin{proposition}[Correlation on disjoint answers]\label{prop:key}
+\[ \E_{z \sim Z_{\mathrm{alice}}|_{B_Q=1}}\Big[I\big(S_Q^{(i)}; X^{(i)} \bigm| Z = (z, 1)\big)\Big] \;\le\; \frac{n^{-2/5}}{\rho_1}. \]
+\end{proposition}
+\begin{proof}
+We first bound the correlation before conditioning on $B_Q$. Since $S_Q^{(i)}$ is part of $S_Q$, the chain rule (\cref{fact:chain}) and \cref{clm:direct-sum} give
+\[ I\big(S_Q^{(i)}; X^{(i)}, U \bigm| Z_{\mathrm{alice}}\big) \;\le\; I\big(S_Q; X^{(i)}, U \bigm| \Phi, \Aall, Q, S_{<Q}\big) \;=\; \frac1m\, I\big(\vS; X^{(i)}, U \bigm| \Phi, \Aall\big). \]
+Since $\Aall$ is a function of $(\vS, \Phi)$, \cref{fact:drop-cond} lets us drop it from the conditioning:
+\[ I\big(\vS; X^{(i)}, U \bigm| \Phi, \Aall\big) \;\le\; I\big(\vS; X^{(i)}, U \bigm| \Phi\big). \]
+Recall that $\Phi = (X^{(\ne i)}, \Psi)$, where $\Psi$ is a function of $(U, R_{\mathrm{Bob}})$ (\cref{thm:too-good}(e)). Since $\vS$ is independent of $X$, and $R_{\mathrm{Bob}}$ is independent of $(\vS, X)$, the chain rule and \cref{fact:basic}(e) and (f) give
+\[ I\big(\vS; X^{(i)}, U \bigm| X^{(\ne i)}, \Psi\big) \;\le\; I\big(\vS; X^{(i)}, U, R_{\mathrm{Bob}} \bigm| X^{(\ne i)}\big) \;=\; I\big(\vS; U \bigm| X^{(i)}, X^{(\ne i)}\big) \;\le\; H(U). \]
+By \eqref{eq:HU}, we conclude that $I(S_Q^{(i)}; X^{(i)}, U | Z_{\mathrm{alice}}) \le H(U)/m \le n^{-2/5}$, since $m = n$. Next we condition on $B_Q$. Since $B_Q$ is a function of $(Z_{\mathrm{alice}}, U)$, the chain rule gives
+\[ I\big(S_Q^{(i)}; X^{(i)} \bigm| Z_{\mathrm{alice}}, B_Q\big) \;\le\; I\big(S_Q^{(i)}; X^{(i)}, U, B_Q \bigm| Z_{\mathrm{alice}}\big) \;=\; I\big(S_Q^{(i)}; X^{(i)}, U \bigm| Z_{\mathrm{alice}}\big) \;\le\; n^{-2/5}. \]
+Finally, by \cref{fact:basic}(b) and (c),
+\begin{align*}
+I\big(S_Q^{(i)}; X^{(i)} \bigm| Z_{\mathrm{alice}}, B_Q\big) \;&=\; \E_{(z,b) \sim (Z_{\mathrm{alice}}, B_Q)}\Big[I\big(S_Q^{(i)}; X^{(i)} \bigm| Z = (z, b)\big)\Big] \\
+\;&\ge\; \rho_1 \cdot \E_{z \sim Z_{\mathrm{alice}}|_{B_Q=1}}\Big[I\big(S_Q^{(i)}; X^{(i)} \bigm| Z = (z, 1)\big)\Big]. \qedhere
+\end{align*}
+\end{proof}
+
+\subsubsection{The main contradiction}
+
+Combining the three bounds gives a monochromatic near-rectangle after conditioning $S_Q^{(i)}$ on an event of constant probability.
+
+\begin{lemma}[A monochromatic near-rectangle]\label{lem:near-rect}
+If $\rho_1 \ge n^{-1/6}$, then there are a value $(z, 1)$ of $Z$ and a set $E \subseteq \binom{B_i}{s_i}$ with $\Pr\big[S_Q^{(i)} \in E \bigm| Z = (z, 1)\big] \ge 3/4$ such that, writing $\cE$ for the event that $Z = (z, 1)$ and $S_Q^{(i)} \in E$,
+\begin{enumerate}[label=(\roman*)]
+  \item $\displaystyle \Hmin\big(S_Q^{(i)} \bigm| \cE\big) \;\ge\; \log\binom{n_i}{s_i} - \frac{\eps s_i}{2}$ \quad and \quad $\displaystyle \Hmin\big(X^{(i)} \bigm| \cE\big) \;\ge\; \log\binom{n_i}{s_i} - \frac{\eps s_i}{2}$, and
+  \item $I\big(S_Q^{(i)}; X^{(i)} \bigm| \cE\big) \;\le\; n^{-1/5}$.
+\end{enumerate}
+In particular, the distribution of $(S_Q^{(i)}, X^{(i)})$ given $\cE$ is a monochromatic $(\eps s_i/2,\, n^{-1/5})$-near-rectangle on $\binom{B_i}{s_i} \times \binom{B_i}{s_i}$.
+\end{lemma}
+\begin{proof}
+Draw $z \sim Z_{\mathrm{alice}}|_{B_Q=1}$. Each of the following fails with probability at most $1/4$:
+\begin{enumerate}[label=(\alph*)]
+  \item there is a set $E$ as in \cref{prop:S-entropy};
+  \item $\Hmin(X^{(i)} | Z = (z, 1)) \ge \log\binom{n_i}{s_i} - \eps s_i/4 - \log(1/\rho_1) - 2$, by \cref{prop:X-leak};
+  \item $I(S_Q^{(i)}; X^{(i)} | Z = (z, 1)) \le 4\, n^{-2/5}/\rho_1 \le 4\, n^{-7/30}$, by \cref{prop:key} and Markov's inequality.
+\end{enumerate}
+So some $z$ satisfies all three. Fix such $z$ and $E$, and let $\cE$ be the event that $Z = (z, 1)$ and $S_Q^{(i)} \in E$. Given $Z = (z, 1)$, the event $S_Q^{(i)} \in E$ is a function of $S_Q^{(i)}$ and has probability at least $3/4$, so \cref{fact:one-side} applies to it.
+\begin{itemize}
+  \item \emph{Min-entropy of $S_Q^{(i)}$.} By (a), $\Hmin(S_Q^{(i)} | \cE) \ge \log\binom{n_i}{s_i} - 32\, n^{1/5} \ge \log\binom{n_i}{s_i} - \eps s_i/2$, since $s_i \ge n^{1/3}$.
+  \item \emph{Min-entropy of $X^{(i)}$.} By (b) and \cref{fact:one-side}, $\Hmin(X^{(i)} | \cE) \ge \log\binom{n_i}{s_i} - \eps s_i/4 - \log(1/\rho_1) - 3 \ge \log\binom{n_i}{s_i} - \eps s_i/2$, since $\log(1/\rho_1) \le (\log n)/6$.
+  \item \emph{Correlation.} By (c) and \cref{fact:one-side}, $I(S_Q^{(i)}; X^{(i)} | \cE) \le \frac43 \cdot 4\, n^{-7/30} \le n^{-1/5}$.
+\end{itemize}
+Finally, by \cref{thm:too-good}(a), $S_Q \cap X = \emptyset$ whenever $B_Q = 1$, so the distribution of $(S_Q^{(i)}, X^{(i)})$ given $\cE$ is supported on disjoint pairs.
+\end{proof}
+
+\paragraph{Passing to a product distribution.}\phantomsection\label{sec:step3}
+As in \cite{ko_omega_2026}, we replace this distribution by the product of its two marginals and apply \cref{lem:rect}.
+
+\begin{corollary}[A nearly monochromatic rectangle]\label{cor:rect}
+If $\rho_1 \ge n^{-1/6}$, let $\cE$ be the event of \cref{lem:near-rect}. Then
+\[ R \;:=\; S_Q^{(i)}|_{\cE} \otimes X^{(i)}|_{\cE} \]
+is an $(\eps s_i/2)$-rectangle on $\binom{B_i}{s_i} \times \binom{B_i}{s_i}$, and
+\[ \Pr_{(S, X) \sim R}\big[S \cap X \ne \emptyset\big] \;\le\; n^{-1/10}. \]
+\end{corollary}
+\begin{proof}
+By \cref{lem:near-rect}, the distribution of $(S_Q^{(i)}, X^{(i)})$ given $\cE$ is a monochromatic $(\eps s_i/2,\, n^{-1/5})$-near-rectangle, and its marginals are $S_Q^{(i)}|_{\cE}$ and $X^{(i)}|_{\cE}$. By \cref{lem:rect} with $\delta = 0$, $R$ is an $(\eps s_i/2)$-rectangle with
+\[ \Pr_{(S, X) \sim R}\big[S \cap X \ne \emptyset\big] \;\le\; \sqrt{\frac{\ln 2}{2}\, n^{-1/5}} \;\le\; n^{-1/10}. \qedhere \]
+\end{proof}
+
+\paragraph{Applying the corruption bound.}\phantomsection\label{sec:step4}
+A corruption bound shows that no such rectangle exists: two independent sparse sets with high min-entropy intersect with noticeable probability. For sets of size $\sqrt N$ in a universe of size $N$, this is the rectangle bound of Babai, Frankl and Simon \cite{babai_complexity_1986}. We need it for sparser sets, and prove it in \cref{sec:corruption}.
+
+\begin{corollary}[High min-entropy rectangles are not monochromatic]\label{cor:product}
+Let $\eps := 1/40$ and $c := 1/100$. Let $s \ge 200$, let $N$ be a multiple of $s^2$, let $\cS := \binom{[N]}{s}$, and let $\nu_A, \nu_B$ be distributions on $\cS$ with
+\[ \Hmin(\nu_A),\, \Hmin(\nu_B) \;\ge\; \log\abs\cS - (\eps s - 1). \]
+Then $\Pr_{a \sim \nu_A,\, b \sim \nu_B}[a \cap b \ne \emptyset] \ge c s^2/N$.
+\end{corollary}
+
+\noindent The following lemma completes the proof of the communication lower bound.
+
+\begin{lemma}[Communication lower bound]\label{lem:comm-lb}
+For every $i \in \cI$, the protocol $G_i$ of \cref{thm:too-good} has $\rho_1 < n^{-1/6}$.
+\end{lemma}
+\begin{proof}
+Suppose, for contradiction, that $\rho_1 \ge n^{-1/6}$. By \cref{cor:rect}, $R$ is an $(\eps s_i/2)$-rectangle on $\binom{B_i}{s_i} \times \binom{B_i}{s_i}$ that puts mass at most $n^{-1/10}$ on intersecting pairs. On the other hand, apply \cref{cor:product} with $N := n_i$ and $s := s_i$, identifying $B_i$ with $[n_i]$; this is allowed since $n_i = \ell s_i^2$, $s_i \ge n^{1/3} \ge 200$ and $\eps s_i/2 \le \eps s_i - 1$. So $R$ puts mass at least $c s_i^2/n_i = c/\ell \ge c/\log n > n^{-1/10}$ on intersecting pairs, a contradiction.
+\end{proof}
+
+\begin{proofof}{\cref{thm:main}}
+Recall that $\ell = \Theta(\log n/\log(t_u w))$ by \cref{clm:params}(a). Let $c_0:=1/192$, and suppose, for contradiction, that $t_q \le c_0\ell^2$. Since $t_u w \le n^{1/95}$, \cref{clm:params}(a) gives $\ell\ge20$, and hence $\abs{\cI}\ge(\ell-4)/3\ge\ell/4$. Hence, using $\sum_{i \in \cI}\tau_i\le \E_{\cD,Q}[T(Q)]\le t_q$, some $i\in\cI$ satisfies $\tau_i\le4c_0\ell$. As in \cref{cor:too-good}, $\log(1/p)\le2\log(t_u w)$, and therefore
+\[
+ p^{8\tau_i} \;\ge\; 2^{-16\tau_i\log(t_u w)}
+ \;\ge\; 2^{-64c_0\ell\log(t_u w)}
+ \;\ge\; n^{-16c_0}=n^{-1/12},
+\]
+where the last inequality uses $4\ell\log(t_u w)=\ell\log\beta\le\log n$. By \cref{thm:too-good}(d),
+\[
+\rho_1 \;\ge\; \frac18 n^{-1/12}-e^{-n^{1/4}/3} \;>\; n^{-1/6},
+\]
+contradicting \cref{lem:comm-lb}. Thus $t_q>c_0\ell^2$, and \cref{clm:params}(a) gives the claimed $\Omega((\log n/\log(t_u w))^2)$ bound. For the bound on $\max(t_u,t_q)$, if $t_u\ge\log^2 n$ there is nothing to prove; otherwise $\log(t_u w)=O(\log\log n)$.
+\end{proofof}
+
+\input{bfs-section}
+
+\section*{AI methodology}
+Claude Opus 5.5 assisted in developing the proof of \cref{lem:corruption}, following the author's proposal to adapt the argument of Babai, Frankl and Simon \cite{babai_complexity_1986} to sparser sets. The modifications are a longer chain of rows and a union bound over groups of pieces. AI tools also assisted with the adaptations and exposition of the published reductions in \cref{sec:graphs}. The applications other than those originally in \cite{patrascu_mihai_towards_2010} were found with the assistance of ChatGPT (GPT-6.0 Astra). For applications based on published reductions, the tool served as an aid to searching the literature. AI tools assisted with application writeups, independent logical checks, and editorial revisions. The author is responsible for the final manuscript.
+
+% =====================================================================
+%  References
+% =====================================================================
+\bibliographystyle{alpha}
+\bibliography{references}
+
+\clearpage
+\input{appendix}
+
+\end{document}

@@ -1,0 +1,136 @@
+% =====================================================================
+\section{A corruption bound for sparse sets}\label{sec:corruption}
+% =====================================================================
+
+We prove a combinatorial bound: two independent sparse sets, each drawn from a sufficiently large family, intersect with noticeable probability. The case $N=s^2$ is the rectangle bound of Babai, Frankl and Simon \cite{babai_complexity_1986}. We extend their argument to $s$-sets in a universe of size $N$, where $N$ is a multiple of $s^2$.
+
+Write $\cS:=\binom{[N]}s$, let $\cA,\cB\subseteq\cS$, and let $\cU_{\cA}$ and $\cU_{\cB}$ be the uniform distributions on these families. We write $\cU$ for the uniform distribution on $\cS$.
+
+\begin{lemma}[Corruption for sparse sets]\label{lem:corruption}
+Let $\eps := 1/40$ and $c := 1/100$. Let $s \ge 200$, and let $N$ be a multiple of $s^2$. If $\cA, \cB \subseteq \cS$ satisfy $\abs \cA, \abs \cB \ge 2^{-\eps s}\abs\cS$, then
+\begin{equation*}
+    \Pr_{\substack{ a \sim\cU_{\cA} \\ b \sim \cU_{\cB}}}[a \cap b \ne \emptyset] \;\ge\; c\cdot\frac{s^2}{N}
+\end{equation*}
+\end{lemma}
+
+First we derive the min-entropy form used in Step~4 (\cref{cor:product}) by applying the flat decomposition in \cref{cor:flat-rect}. We restate the corollary for convenience.
+
+\begin{repcorollary}{cor:product}
+Let $s \ge 200$, let $N$ be a multiple of $s^2$, and let $\nu_A, \nu_B$ be distributions on $\cS$ with
+\[ \Hmin(\nu_A),\, \Hmin(\nu_B) \;\ge\; \log\abs\cS - (\eps s - 1). \]
+Then $\Pr_{a \sim \nu_A,\, b \sim \nu_B}[a \cap b \ne \emptyset] \ge c s^2/N$.
+\end{repcorollary}
+\begin{proof}
+The product $\nu_A \otimes \nu_B$ is an $(\eps s - 1)$-rectangle. Since $\abs\cS \ge 2^{\eps s}$, some integer $K$ satisfies $2^{-\eps s}\abs\cS \le K \le 2^{1 - \eps s}\abs\cS$. By \cref{cor:flat-rect} with this $K$, the product is a convex combination of uniform distributions on combinatorial rectangles $\cA \times \cB$ with $\abs\cA = \abs\cB = K \ge 2^{-\eps s}\abs\cS$. By \cref{lem:corruption}, each of them puts mass at least $c s^2/N$ on intersecting pairs. Linearity gives the same bound for $\nu_A \otimes \nu_B$.
+\end{proof}
+
+The one-sided formulation is essential: an analogous lower bound on the probability of disjointness is false. If $\log(N/s) \le \eps s$, as in our application, then the family $\cA$ of sets that contain a fixed element has $\abs\cA = (s/N)\abs\cS \ge 2^{-\eps s}\abs\cS$, but all pairs in $\cA \times \cA$ intersect. This is why the main proof uses only runs whose answer is ``disjoint''.
+
+\subsection{Counting facts}\label{sec:bfs-tools}
+
+We use the following counting estimates, as in \cite{babai_complexity_1986}. Write $H_{\mathrm b}(\alpha) := -\alpha\log\alpha - (1-\alpha)\log(1-\alpha)$ for the binary entropy function.
+
+\begin{fact}[Binomial estimates]\label{fact:binom}
+For all integers $u \ge 0$ and $k \ge 1$, $\binom uk \le \big(\frac{eu}{k}\big)^k$. For every integer $g \ge 1$ and every $0 < \alpha \le 1/2$,
+\[ \sum_{0 \le h \le \alpha g}\binom gh \;\le\; 2^{H_{\mathrm b}(\alpha)g}. \]
+\end{fact}
+
+\noindent For $a \sim \cU$, the probability that $a$ contains a fixed set or avoids a fixed set is expressed by binomial coefficients. For $T, V \subseteq [N]$ with $\abs T = k \le s$,
+\begin{align*}
+\Pr_{a \sim \cU}[T \subseteq a] \;&=\; \binom{N-k}{s-k}\Big/\binom Ns \;=\; \prod_{h=0}^{k-1}\frac{s-h}{N-h} \;\le\; \Big(\frac sN\Big)^k, \\
+\Pr_{a \sim \cU}[a \cap V = \emptyset] \;&=\; \binom{N - \abs V}{s}\Big/\binom Ns \;=\; \prod_{h=0}^{s-1}\frac{N - \abs V - h}{N-h} \;\le\; \Big(1 - \frac{\abs V}{N}\Big)^s,
+\end{align*}
+and $\Pr[T \subseteq a] = 0$ if $\abs T > s$. We use the following two consequences.
+
+\begin{claim}[Two counting facts]\label{clm:counting}
+Let $1 \le s \le N$.
+\begin{enumerate}[label=(\alph*)]
+  \item For every $P \subseteq [N]$ and every integer $k \ge 1$, $\Pr_{a \sim \cU} \big[\abs{a \cap P} \ge k\big] \le \binom{\abs P}{k}\big(\frac sN\big)^k \le \big(\frac{e\abs{P}s}{kN}\big)^k$.
+  \item For every $V \subseteq [N]$, $\Pr_{a \sim \cU} [a \cap V = \emptyset] \le \big(1 - \frac{\abs V}{N}\big)^s \le e^{-s\abs{V}/N}$.
+\end{enumerate}
+\end{claim}
+\begin{proof}
+(a) If $\abs{a \cap P} \ge k$, then $a$ contains some $T \subseteq P$ with $\abs T = k$. By a union bound over the $\binom{\abs P}{k}$ choices of $T$, the bound $\Pr[T \subseteq a] \le (s/N)^k$, and \cref{fact:binom},
+\begin{align*}
+\Pr_{a \sim \cU}\big[\abs{a \cap P} \ge k\big]
+\;&\le\; \Pr_{a \sim \cU}\big[\exists\, T \subseteq P \text{ with } \abs T = k \text{ and } T \subseteq a\big]
+\;\le\; \sum_{\substack{T \subseteq P \\ \abs T = k}} \Pr_{a \sim \cU}[T \subseteq a] \\
+\;&\le\; \binom{\abs P}{k}\Big(\frac sN\Big)^k \;\le\; \Big(\frac{e\abs P s}{kN}\Big)^k.
+\end{align*}
+(b) If $N-\abs V<s$, the avoidance probability is zero and the bound follows. Otherwise, all factors below are nonnegative and satisfy $\frac{N - \abs V - h}{N-h} \le 1 - \frac{\abs V}{N}$. Using $1-x\le e^{-x}$,
+\begin{align*}
+\Pr_{a \sim \cU}[a \cap V = \emptyset]
+\;&=\; \binom{N - \abs V}{s}\Big/\binom Ns
+\;=\; \prod_{h=0}^{s-1}\frac{N - \abs V - h}{N-h} \\
+\;&\le\; \Big(1 - \frac{\abs V}{N}\Big)^s \;\le\; e^{-s\abs V/N}.
+\end{align*}
+
+\end{proof}
+
+\subsection{Proof of the corruption bound}\label{sec:bfs}
+
+For $N = s^2$, \cref{lem:corruption} is the rectangle bound behind the $\Omega(\sqrt N)$ lower bound for Disjointness of \cite{babai_complexity_1986} (see also \cite[Section~3.2, proof of Theorem~6]{chattopadhyay_story_2010}). We first recall their argument before explaining the changes needed for sparser sets. Suppose that $\cA \times \cB$ is large and nearly disjoint.
+\begin{itemize}[leftmargin=*]
+  \item \emph{A disjoint chain in $\cA$:} Since $\cA$ is large, it contains rows $a_1, \dots, a_t$ with $t = \Theta(s)$, each of which has at least $\lceil s/2\rceil$ elements outside the earlier rows. These pieces of new elements are pairwise disjoint and together cover a constant fraction of $[N]$.
+  \item \emph{Columns of $\cB$ avoid the chain:} A typical row meets few columns of $\cB$, so a typical column of $\cB$ meets few of the pieces. That is, it lies in the complement of all but a few of the pieces.
+  \item \emph{Few sets avoid the chain:} A uniform $s$-set meets each piece with constant probability. A union bound over which pieces it meets shows that only a $2^{-\Omega(s)}$ fraction of all $s$-sets meet so few pieces. Hence $\cB$ is small, a contradiction.
+\end{itemize}
+For sparser sets, i.e.\ when $N$ is a multiple of $s^2$, we make two changes.
+\begin{itemize}[leftmargin=*]
+  \item \emph{A longer chain:} We take $t=(N/s^2)\lfloor s/6\rfloor=\Theta(N/s)$ rows. The $t$ rows cover at most $N/6$ elements, so another row with many new elements can still be found, while the disjoint pieces cover a constant fraction of the universe.
+  \item \emph{Grouping the pieces:} We group the $t$ pieces into $g=\lfloor s/6\rfloor$ groups of $N/s^2$ pieces each, and apply the union bound to groups instead of pieces. Each group has $\Theta(N/s)$ elements, so a uniform $s$-set meets it with constant probability, just as it meets a single piece when $N=s^2$. For $N = s^2$, every group is a single piece.
+\end{itemize}
+
+\begin{proofof}{\cref{lem:corruption}}
+For brevity set $\delta := c s^2/N$. Recall that $\abs\cA, \abs\cB \ge 2^{-\eps s}\abs\cS$. Suppose, for contradiction, that
+\[ \Pr_{a \sim \cU_{\cA},\, b \sim \cU_{\cB}}[a \cap b \ne \emptyset] \;<\; \delta. \]
+We show that $\abs \cB < 2^{-\eps s}\abs\cS$.
+
+\emph{Good rows.} Let $\cA' := \{a \in \cA : \Pr_{b \sim \cU_{\cB}}[a \cap b \ne \emptyset] \le 2\delta\}$. By Markov's inequality, $\abs{\cA'} \ge \abs \cA/2 \ge 2^{-\eps s - 1}\abs\cS$.
+
+\emph{A chain of rows with new elements.} Put $r:=N/s^2$, $k:=\lceil s/2\rceil$, $g:=\lfloor s/6\rfloor$, and $t:=rg$. These are positive integers. We select $t$ rows in $\cA'$, each of which brings at least $k$ new elements.
+
+\begin{claim}[A chain of rows with new elements]\label{clm:spread}
+There are $a_1, \dots, a_t \in \cA'$ and sets $D_1, \dots, D_t$ such that, for every $j \in [t]$,
+\[ D_j \;\subseteq\; a_j \setminus (a_1 \cup \dots \cup a_{j-1}) \qquad\text{and}\qquad \abs{D_j} = k. \]
+In particular, $D_1, \dots, D_t$ are pairwise disjoint.
+\end{claim}
+\begin{proof}
+We choose $a_1, a_2, \dots$ greedily. Let $1 \le j \le t$, suppose that $a_1, \dots, a_{j-1}$ have been chosen, and let $P_j := a_1 \cup \dots \cup a_{j-1}$ (so $P_1 = \emptyset$). It suffices to find $a_j\in\cA'$ with $\abs{a_j\cap P_j}<k$. Then $\abs{a_j\setminus P_j}\ge s-k+1\ge k$, so we can choose $D_j$ to contain $k$ new elements.
+
+Each earlier row has $s$ elements, so $\abs{P_j}\le(j-1)s<ts\le N/6$. By \cref{clm:counting}(a), using $k\ge s/2$,
+\[
+\Pr_{a\sim\cU}[\abs{a\cap P_j}\ge k]
+\le\left(\frac{e\abs{P_j}s}{kN}\right)^k
+\le(e/3)^k\le(e/3)^{s/2}\le2^{-0.071s}.
+\]
+Since $\abs{\cA'}\ge2^{-\eps s-1}\abs\cS>2^{-0.071s}\abs\cS$, some $a_j\in\cA'$ has $\abs{a_j\cap P_j}<k$. Finally, $D_j \subseteq a_j \setminus P_j$ is disjoint from $D_1, \dots, D_{j-1} \subseteq P_j$.
+\end{proof}
+
+\emph{Grouping the pieces.} Partition $[t]$ into $g$ sets $\Gamma_1,\dots,\Gamma_g$, each of size $r=N/s^2$. For $u \in [g]$, let
+\[ E_u \;:=\; \bigcup_{j \in \Gamma_u} D_j. \]
+The sets $E_1, \dots, E_g$ are pairwise disjoint, and each has $rk\ge N/(2s)$ elements.
+
+\emph{Most columns miss most of the groups.} Since every $a_j$ lies in $\cA'$,
+\[ \E_{b \sim \cU_{\cB}}\big[\,\abs{\{j \in [t] : a_j \cap b \ne \emptyset\}}\,\big] \;=\; \sum_{j=1}^{t}\Pr_{b \sim \cU_{\cB}}[a_j \cap b \ne \emptyset] \;\le\; 2\delta t, \]
+so by Markov's inequality the set $\cB'$ of $b \in \cB$ that meet at most $4\delta t$ of the rows $a_j$ satisfies $\abs{\cB'} \ge \abs \cB/2$. If $b$ meets $E_u$, then it meets $a_j \supseteq D_j$ for some $j \in \Gamma_u$, and the sets $\Gamma_u$ are disjoint. So every $b \in \cB'$ meets at most $4\delta t$ of the sets $E_u$, and by our choice of parameters
+\[4\delta t=4\cdot\frac{cs^2}{N}\cdot\frac{N}{s^2}g=4cg=\frac{g}{25}.\]
+
+\emph{Counting $\cB'$.} If $b\in\cB'$ meets $h\le g/25$ groups, it avoids the union $V$ of the other $g-h$ groups. Since $\abs V=(g-h)rk\ge(g-h)N/(2s)$,
+\[
+\frac{s\abs V}{N}\ge\frac{g-h}{2}\ge\frac{12g}{25}.
+\]
+For each choice of the groups met, \cref{clm:counting}(b) bounds the number of such sets by $e^{-12g/25}\abs\cS$. A union bound and \cref{fact:binom} give
+\begin{align*}
+\abs{\cB'}
+&\le \sum_{0\le h\le g/25}\binom gh e^{-12g/25}\abs\cS\\
+&\le 2^{H_{\mathrm b}(1/25)g}e^{-12g/25}\abs\cS
+\le2^{-0.45g}\abs\cS,
+\end{align*}
+because $H_{\mathrm b}(1/25)\le0.2423$ and $12/(25\ln2)>0.69249$. As $g\ge s/6-1$ and $s\ge200$,
+\[
+\abs\cB\le2\abs{\cB'}\le2^{-0.075s+1.45}\abs\cS
+<2^{-s/40}\abs\cS,
+\]
+contradicting the assumed size of $\cB$.
+\end{proofof}
