@@ -24,17 +24,6 @@ theorem information_of_function_le (μ : Measure Ω) [IsZeroOrProbabilityMeasure
       mutualInfo_eq_entropy_sub_condEntropy hX hY]
   exact sub_le_sub_left (condEntropy_comp_ge μ hY hX f) _
 
-theorem independent_pair (μ : Measure Ω) [IsZeroOrProbabilityMeasure μ]
-    {X : Ω → A} {Z : Ω → C} {Y : Ω → B} (hX : Measurable X) (hZ : Measurable Z)
-    (hY : Measurable Y) (ind : IndepFun X Z μ) :
-    I[X : Y ; μ] + I[Z : Y ; μ] ≤ I[prod X Z : Y ; μ] := by
-  rw [mutualInfo_eq_entropy_sub_condEntropy hX hY, mutualInfo_eq_entropy_sub_condEntropy hZ hY,
-    mutualInfo_eq_entropy_sub_condEntropy (hX.prodMk hZ) hY, ind.entropy_pair_eq_add hX hZ]
-  have h := condMutualInfo_nonneg (μ := μ) (Z := Y) hX hZ
-  rw [condMutualInfo_eq hX hZ hY] at h
-  linarith
-
-
 theorem message_chain (μ : Measure Ω) [IsZeroOrProbabilityMeasure μ]
     {X : Ω → A} {Y : Ω → B} {Z : Ω → C} (hX : Measurable X) (hY : Measurable Y)
     (hZ : Measurable Z) :
