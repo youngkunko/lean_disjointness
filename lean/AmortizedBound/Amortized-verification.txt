@@ -2,13 +2,13 @@ Verification of the Amortized Disjointness formalization
 
 Reference and scope
 
-The reference is main.tex in the supplied amortized_bound.zip. AmortizedBound.lean contains the formalization in a single source file. Its external imports come from the public audited Disjointness project and its pinned Lean dependencies. No manuscript archive is an input to the Lean build.
+The reference is human-proofs/AmortizedBound/main.tex in this repository. AmortizedBound.lean contains the formalization in a single source file. Its external imports come from the public audited Disjointness project and its pinned Lean dependencies. No manuscript archive is an input to the Lean build.
 
 Main theorems
 
 1. AmortizedBound.total_work proves a lower bound of Ω(n (log N / log log N)²) on expected total word probes for one fixed, data-structure-independent distribution. The machine preprocesses N query sets. Each hard set contains n elements, and n distinct insertions each have a query immediately afterward. The average includes the preprocessing tape, update and query randomness, query rows and query indices. Preprocessing probes are free. Writes made by queries persist and are charged. Lean uses n = floor(N^(1/4)); fourth_root proves n⁴ ≤ N < (n+1)⁴.
 
-2. AmortizedBound.query_tradeoff proves t_q = Ω((log N / log(t_u w))²) for logarithmic word width and subpolynomial amortized insertion cost t_u ≥ 1. The expectation for each update-prefix budget is taken separately on that fixed input. The final query can follow every fresh insertion prefix, at a stopping position unknown to the machine. The error bound is 1/4096 on each fixed query history. Termination is almost sure. A source computation that does not terminate is assigned infinite cost. The corollary for max(t_u,t_q) follows with scale (log N / log log N)².
+2. AmortizedBound.query_tradeoff proves t_q = Ω((log N / log(t_u w))²) for logarithmic word width and subpolynomial amortized insertion cost t_u ≥ 1. The expectation for each update-prefix budget is taken separately on that fixed input. The final query can follow every fresh insertion prefix, at a stopping position unknown to the machine. The error bound is 1/4096 on each fixed query history. Termination is almost sure. A source computation that does not terminate is assigned infinite cost. The constant depends only on the word-size constants: one constant serves every update budget t_u with 1 ≤ t_u = N^{o(1)}. The corollary for max(t_u,t_q) follows with scale (log N / log log N)², with the same uniformity.
 
 Lean verification
 
@@ -34,17 +34,17 @@ Graph applications
 
 Reproduction
 
-Unzip Disjointness-Lean-audited.zip. Place AmortizedBound.lean and CheckAmortized.lean in the extracted DisjointnessLean directory alongside lakefile.toml. With Lean’s toolchain manager and Git available, run the following from that directory. The project README includes an alternative cache command for macOS.
+AmortizedBound.lean builds on the Disjointness project in lean/DisjointnessLean. With Lean’s toolchain manager and Git available, run the following from lean/DisjointnessLean. The project README includes an alternative cache command for macOS.
 
     lake exe cache get
     lake build DisjointnessDraft
-    lake env lean -o .lake/build/lib/lean/AmortizedBound.olean AmortizedBound.lean
-    lake env lean CheckAmortized.lean
+    lake env lean --root=../AmortizedBound -o .lake/build/lib/lean/AmortizedBound.olean ../AmortizedBound/AmortizedBound.lean
+    lake env lean ../AmortizedBound/CheckAmortized.lean
 
 The optional final check independently inspects the axioms of all theorems, safe definitions and safe opaque declarations in the new module. It also inspects the proof dependencies of the main results.
 
 Artifact fingerprints (SHA-256)
 
-amortized_bound.zip  ada8a600b22001aeee44463ab77b5eeb59329221931b01d6da9f46a1937bb475
-AmortizedBound.lean  82c108605cc9ee92fa6b4be3b678568439e838f927394eac8c44648ded291010
-CheckAmortized.lean  c704d7eef4b6bcf9f5f828d73c11b771590fcc781a26063effb4ff649f1a8e5d
+AmortizedBound.lean  23668d0be3ab0ee9e1de489f66975039ac940ee8b96af9733303f9ddf98e97ab
+CheckAmortized.lean  21e0f0e5b91ffa39087ee48b22b34b5b98cfeecb1541536ff28a6f55e7896188
+human-proofs/AmortizedBound/main.tex  b2dce9b77cb395c37cae59782b6ef34f8acfff250659618958fa2b52cff94915

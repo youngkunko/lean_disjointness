@@ -463,10 +463,10 @@ def TotalWorkBound : Prop := ∀ lo hi : ℝ, 0<lo → lo≤hi → ∃ c : ℝ, 
 /-- Subpolynomial update budgets along the input-size sequence. -/
 def Subpolynomial (tu : ℕ → ℝ) := ∀ ε : ℝ, 0<ε → ∀ᶠ N : ℕ in atTop, tu N ≤ (N:ℝ)^ε
 
-/-- Statement of the manuscript's amortized insertion / expected query trade-off. -/
-def QueryTradeoff : Prop := ∀ lo hi : ℝ, 0<lo → lo≤hi → ∀ tu : ℕ → ℝ,
-  (∀ᶠ N : ℕ in atTop, 1 ≤ tu N) → Subpolynomial tu → ∃ c : ℝ, 0<c ∧
-  ∀ᶠ N : ℕ in atTop, ∀ w, wordSize lo hi N w → ∀ tq : ℝ, 0≤tq →
+/-- Statement of the manuscript's amortized insertion / expected query trade-off.
+    The constant depends only on the word-size constants, not on the update budget. -/
+def QueryTradeoff : Prop := ∀ lo hi : ℝ, 0<lo → lo≤hi → ∃ c : ℝ, 0<c ∧ ∀ tu : ℕ → ℝ,
+  (∀ᶠ N : ℕ in atTop, 1 ≤ tu N) → Subpolynomial tu → ∀ᶠ N : ℕ in atTop, ∀ w, wordSize lo hi N w → ∀ tq : ℝ, 0≤tq →
     ∀ (Ω : Type) [MeasurableSpace Ω] (μ : Measure Ω) [IsProbabilityMeasure μ] (D : DataStructure N w Ω),
     Correct μ D (hardFamilies N) (singleHistories N) → PrefixBudgets μ D (tu N) tq →
     c * ratio N w (tu N) ≤ tq
@@ -4302,29 +4302,43 @@ private theorem scale_update {f : Filter ℕ} {N : ℕ→ℕ} {tu : ℕ→ℝ}
        _ = _ := by rw [←Real.rpow_natCast_mul nn]; push_cast; congr 1; ring
 
 theorem query_tradeoff (physical : NoFastMachine) : QueryTradeoff := by
-  intro lo hi lp lh tu unit sub
+  intro lo hi lp lh
   by_contra fails
-  let Bad (N : ℕ) (u : ℝ) := ∃ z : ℕ×ℝ,
-    wordSize lo hi N z.1 ∧ 0≤z.2 ∧ Single N z.1 (tu N) z.2 ∧ z.2 < u*ratio N z.1 (tu N)
+  let Bad (N : ℕ) (u : ℝ) := ∃ z : (ℕ×ℝ)×ℝ, 1≤z.2 ∧ z.2≤(N:ℝ)^u ∧
+    wordSize lo hi N z.1.1 ∧ 0≤z.1.2 ∧ Single N z.1.1 z.2 z.1.2 ∧ z.1.2 < u*ratio N z.1.1 z.2
   have freq (u : ℝ) (up : 0<u) : ∃ᶠ N : ℕ in atTop, Bad N u := by
     by_contra notBad
     apply fails
-    refine ⟨u,up,?_⟩
-    filter_upwards [not_frequently.mp notBad] with N good
+    refine ⟨u,up,fun tu unit sub => ?_⟩
+    filter_upwards [not_frequently.mp notBad,unit,sub u up] with N good one cap
     intro w word tq tq0 Ω m μ prob D ok costs
     apply le_of_not_gt
     intro tooSmall
-    exact good ⟨(w,tq),word,tq0,⟨Ω,m,μ,prob,D,ok,costs⟩,tooSmall⟩
+    exact good ⟨((w,tq),tu N),one,cap,word,tq0,⟨Ω,m,μ,prob,D,ok,costs⟩,tooSmall⟩
   obtain ⟨f,N,δ,proper,large,grows,tiny,base⟩ := diagonal Bad freq
   haveI : f.NeBot := proper
   obtain ⟨z,chosen⟩ := chooseEventually (base.mono fun n h => h.2.2)
-  let W n := (z n).1
-  let q n := (z n).2
-  let a n := tu (N n)
+  let W n := (z n).1.1
+  let q n := (z n).1.2
+  let a n := (z n).2
   have root := base.mono (fun n h => h.2.1)
-  have words := scale_word (W:=W) large lp (lp.trans_le lh) root (chosen.mono fun n h => h.1)
+  have words := scale_word (W:=W) large lp (lp.trans_le lh) root (chosen.mono fun n h => h.2.2.1)
+  have update (e : ℝ) (ep : 0<e) : ∀ᶠ n : ℕ in f, a n ≤ (n:ℝ)^e := by
+    filter_upwards [chosen,root,base.mono (fun n h => h.1),
+      tiny.eventually (Iio_mem_nhds (show 0<e/8 by positivity)),
+      (eventually_ge_atTop 2).filter_mono large] with n alg rt dpos dsmall n2
+    have upper := (fourth_root (N n)).2.le
+    rw [rt] at upper
+    have ns : n+1≤n^2 := by nlinarith
+    have cap : N n ≤ n^8 := upper.trans ((Nat.pow_le_pow_left ns 4).trans_eq (by ring))
+    have n1 : (1:ℝ) ≤ n := by exact_mod_cast (by omega : 1≤n)
+    have d8 : δ n < e/8 := dsmall
+    calc a n ≤ ((N n):ℝ)^(δ n) := alg.2.1
+      _ ≤ ((n:ℝ)^8)^(δ n) := Real.rpow_le_rpow (Nat.cast_nonneg _) (by exact_mod_cast cap) dpos.le
+      _ = (n:ℝ)^((8:ℕ)*δ n) := (Real.rpow_natCast_mul (Nat.cast_nonneg _) 8 (δ n)).symm
+      _ ≤ (n:ℝ)^e := Real.rpow_le_rpow_of_exponent_le n1 (by push_cast; linarith)
   have scale : PhysicalScale f a (fun n => (W n:ℝ)) :=
-    ⟨large,grows.eventually unit,scale_update (N:=N) (tu:=tu) large grows sub root,words⟩
+    ⟨large,chosen.mono fun n h => h.1,update,words⟩
   have small (ε : ℝ) (ep : 0<ε) : ∀ᶠ n : ℕ in f, q n≤ε*(logb 2 n/logb 2 (a n*(W n)))^2 := by
     filter_upwards [chosen,base,scale.growing 2, tiny.eventually (Iio_mem_nhds (show 0<ε/64 by positivity)),
       (eventually_ge_atTop 2).filter_mono large] with n alg zδ aw dsmall n2
@@ -4339,13 +4353,13 @@ theorem query_tradeoff (physical : NoFastMachine) : QueryTradeoff := by
     have sq := pow_le_pow_left₀ (div_nonneg Nn dpos.le) rat 2
     have coeff : δ n≤ε/64 := le_of_lt dsmall
     have u := mul_le_mul coeff sq (sq_nonneg _) (by positivity)
-    have bad : q n<δ n*(logb 2 (N n)/den)^2 := alg.2.2.2
+    have bad : q n<δ n*(logb 2 (N n)/den)^2 := alg.2.2.2.2.2
     exact bad.le.trans (u.trans_eq (by ring))
   have fast := fast_single scale small
   obtain ⟨n,spec,reg,rootN,algo⟩ := (physical.filter_mono large |>.and
     ((eventual_regime fast).and (root.and chosen))).exists
   apply spec (N n) (W n) (a n) (max 1 (q n)) rootN reg
-  obtain ⟨Ω,m,μ,iμ,D,ok,costs⟩ := algo.2.2.1
+  obtain ⟨Ω,m,μ,iμ,D,ok,costs⟩ := algo.2.2.2.2.1
   exact Or.inl ⟨Ω,m,μ,iμ,D,ok,costs.updates,fun F hf xs hx i =>
     (costs.query F hf xs hx i).trans (ENNReal.ofReal_le_ofReal (le_max_right ..))⟩
 
@@ -5935,15 +5949,14 @@ open Classical
 
 /-- The last assertion of the single-query trade-off, including its quantifiers
 over randomized machines and expected costs. -/
-theorem maximum_of_query (bound : QueryTradeoff) (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi)
-    (tu : ℕ→ℝ) (one : ∀ᶠ N : ℕ in atTop, 1≤tu N) (sub : Subpolynomial tu) :
-    ∃ c : ℝ, 0<c ∧ ∀ᶠ N : ℕ in atTop, ∀ w, wordSize lo hi N w → ∀ tq : ℝ, 0≤tq →
+theorem maximum_of_query (bound : QueryTradeoff) (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi) :
+    ∃ c : ℝ, 0<c ∧ ∀ tu : ℕ→ℝ, (∀ᶠ N : ℕ in atTop, 1≤tu N) → Subpolynomial tu → ∀ᶠ N : ℕ in atTop, ∀ w, wordSize lo hi N w → ∀ tq : ℝ, 0≤tq →
       ∀ (Ω : Type) [MeasurableSpace Ω] (μ : Measure Ω) [IsProbabilityMeasure μ] (D : DataStructure N w Ω),
       Correct μ D (hardFamilies N) (singleHistories N) → PrefixBudgets μ D (tu N) tq →
       c*totalScale N ≤ max (tu N) tq := by
-  obtain ⟨d,dp,lb⟩ := bound lo hi lp lh tu one sub
-  refine ⟨min 1 (d/16),lt_min (by norm_num) (by positivity),?_⟩
-  filter_upwards [lb,one,Tradeoff.log_tends.eventually_ge_atTop (max (max 2 hi) (2/lo))] with N bound unit lg
+  obtain ⟨d,dp,lbu⟩ := bound lo hi lp lh
+  refine ⟨min 1 (d/16),lt_min (by norm_num) (by positivity),fun tu one sub => ?_⟩
+  filter_upwards [lbu tu one sub,one,Tradeoff.log_tends.eventually_ge_atTop (max (max 2 hi) (2/lo))] with N bound unit lg
   intro w ww tq tq0 Ω _ μ _ D ok costs
   let L := logb 2 N
   let l := logb 2 L
@@ -6377,12 +6390,15 @@ private theorem grow_size (p : ℕ) : Tendsto (fun N => graphSize N p) atTop atT
   tendsto_atTop_mono (fun N => by change N≤2*N+1+p; omega) tendsto_id
 
 theorem incremental_query_at_padding (bound : QueryTradeoff) {p : ℕ} (pad : p≤1)
-    (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi) (tu : ℕ→ℝ)
-    (unit : ∀ᶠ V : ℕ in atTop, 1≤tu V) (sub : Subpolynomial tu) :
-    ∃ c : ℝ, 0<c ∧ ∀ᶠ N : ℕ in atTop, ∀ w, wordSize lo hi (graphSize N p) w → ∀ tq : ℝ, 0≤tq →
+    (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi) :
+    ∃ c : ℝ, 0<c ∧ ∀ tu : ℕ→ℝ, (∀ᶠ V : ℕ in atTop, 1≤tu V) → Subpolynomial tu →
+    ∀ᶠ N : ℕ in atTop, ∀ w, wordSize lo hi (graphSize N p) w → ∀ tq : ℝ, 0≤tq →
       ∀ (k : Incremental) (Ω : Type) [MeasurableSpace Ω] (μ : Measure Ω) [IsProbabilityMeasure μ]
         (D : GraphMachine N p w Ω), GraphCorrect μ D k (singleHistories N) → UpdateQueryCost μ D k (tu (graphSize N p)) tq →
       c*ratio (graphSize N p) w (tu (graphSize N p)) ≤ tq := by
+  have hp := lp.trans_le lh
+  obtain ⟨d,dp,lbu⟩ := bound lo (2*hi) lp (by linarith)
+  refine ⟨d/4,by positivity,fun tu unit sub => ?_⟩
   let a N := tu (graphSize N p)
   have one : ∀ᶠ N : ℕ in atTop,1≤a N := (grow_size p).eventually unit
   have small : Subpolynomial a := by
@@ -6393,10 +6409,7 @@ theorem incremental_query_at_padding (bound : QueryTradeoff) {p : ℕ} (pad : p�
       (show 0≤e/2 by positivity)
     rw [←Real.rpow_natCast_mul (Nat.cast_nonneg N),show (↑(2:ℕ):ℝ)*(e/2)=e by push_cast;ring] at pow
     exact cap.trans pow
-  have hp := lp.trans_le lh
-  obtain ⟨d,dp,lb⟩ := bound lo (2*hi) lp (by linarith) a one small
-  refine ⟨d/4,by positivity,?_⟩
-  filter_upwards [lb,one,eventually_ge_atTop 3,Tradeoff.log_tends.eventually_ge_atTop (2/lo)] with N bound a1 n3 big
+  filter_upwards [lbu a one small,one,eventually_ge_atTop 3,Tradeoff.log_tends.eventually_ge_atTop (2/lo)] with N bound a1 n3 big
   intro w ww tq tq0 k Ω _ μ _ D ok costs
   have w' := width lp hp n3 pad ww
   have val := bound w w' tq tq0 Ω μ (source k D) (correct_source μ D k _ ok) (cost_source μ D k _ _ costs)
@@ -6470,16 +6483,16 @@ theorem graph_work_budget {N p w : ℕ} (np : 0<hardSize N) [MeasurableSpace Ω]
   exact (Finset.sum_le_sum (fun z _ => upper z)).trans_eq (by simp [mul_comm])
 
 /-- A single constant handles odd and even numbers of graph vertices. -/
-theorem incremental_query (bound : QueryTradeoff) (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi) (tu : ℕ→ℝ)
-    (unit : ∀ᶠ V : ℕ in atTop, 1≤tu V) (sub : Subpolynomial tu) :
-    ∃ c : ℝ, 0<c ∧ ∀ᶠ N : ℕ in atTop, ∀p≤1, ∀w, wordSize lo hi (graphSize N p) w → ∀tq : ℝ, 0≤tq →
+theorem incremental_query (bound : QueryTradeoff) (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi) :
+    ∃ c : ℝ, 0<c ∧ ∀ tu : ℕ→ℝ, (∀ᶠ V : ℕ in atTop, 1≤tu V) → Subpolynomial tu →
+    ∀ᶠ N : ℕ in atTop, ∀p≤1, ∀w, wordSize lo hi (graphSize N p) w → ∀tq : ℝ, 0≤tq →
       ∀ (k : Incremental) (Ω : Type) [MeasurableSpace Ω] (μ : Measure Ω) [IsProbabilityMeasure μ]
         (D : GraphMachine N p w Ω), GraphCorrect μ D k (singleHistories N) → UpdateQueryCost μ D k (tu (graphSize N p)) tq →
       c*ratio (graphSize N p) w (tu (graphSize N p))≤tq := by
-  obtain ⟨c,cp,even⟩ := incremental_query_at_padding bound (Nat.zero_le 1) lo hi lp lh tu unit sub
-  obtain ⟨d,dp,odd⟩ := incremental_query_at_padding bound (le_refl 1) lo hi lp lh tu unit sub
-  refine ⟨min c d,lt_min cp dp,?_⟩
-  filter_upwards [even,odd] with N e o
+  obtain ⟨c,cp,even⟩ := incremental_query_at_padding bound (Nat.zero_le 1) lo hi lp lh
+  obtain ⟨d,dp,odd⟩ := incremental_query_at_padding bound (le_refl 1) lo hi lp lh
+  refine ⟨min c d,lt_min cp dp,fun tu unit sub => ?_⟩
+  filter_upwards [even tu unit sub,odd tu unit sub] with N e o
   intro p pad w ww tq tq0 k Ω _ μ _ D ok costs
   by_cases z : p=0
   · subst p
@@ -7176,13 +7189,12 @@ def extra (V : ℕ) := V-(2*side V+1)
 theorem exact_vertices {V : ℕ} (v : 0<V) : graphSize (side V) (extra V)=V := by
   simp only [graphSize,extra,side]; omega
 
-theorem disjointness_maximum (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi) (tu : ℕ→ℝ)
-    (unit : ∀ᶠ N : ℕ in atTop, 1≤tu N) (sub : Subpolynomial tu) :
-    ∃ c : ℝ, 0<c ∧ ∀ᶠ N : ℕ in atTop, ∀ w, wordSize lo hi N w → ∀ tq : ℝ, 0≤tq →
+theorem disjointness_maximum (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi) :
+    ∃ c : ℝ, 0<c ∧ ∀ tu : ℕ→ℝ, (∀ᶠ N : ℕ in atTop, 1≤tu N) → Subpolynomial tu → ∀ᶠ N : ℕ in atTop, ∀ w, wordSize lo hi N w → ∀ tq : ℝ, 0≤tq →
       ∀ (Ω : Type) [MeasurableSpace Ω] (μ : Measure Ω) [IsProbabilityMeasure μ] (D : DataStructure N w Ω),
       Correct μ D (hardFamilies N) (singleHistories N) → PrefixBudgets μ D (tu N) tq →
       c*totalScale N ≤ max (tu N) tq :=
-  maximum_of_query AmortizedBound.query_tradeoff lo hi lp lh tu unit sub
+  maximum_of_query AmortizedBound.query_tradeoff lo hi lp lh
 
 theorem total_work (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi) :
     ∃ c : ℝ, 0<c ∧ ∀ᶠ V : ℕ in atTop, ∀w, wordSize lo hi V w →
@@ -7197,15 +7209,14 @@ theorem total_work (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi) :
   change graphSize ((V-1)/2) (V-(2*((V-1)/2)+1))=V at eq
   simpa only [eq] using lower
 
-theorem query_tradeoff (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi) (tu : ℕ→ℝ)
-    (unit : ∀ᶠ V : ℕ in atTop,1≤tu V) (sub : Subpolynomial tu) :
-    ∃ c : ℝ, 0<c ∧ ∀ᶠ V : ℕ in atTop, ∀w, wordSize lo hi V w → ∀ tq : ℝ,0≤tq →
+theorem query_tradeoff (lo hi : ℝ) (lp : 0<lo) (lh : lo≤hi) :
+    ∃ c : ℝ, 0<c ∧ ∀ tu : ℕ→ℝ, (∀ᶠ V : ℕ in atTop,1≤tu V) → Subpolynomial tu → ∀ᶠ V : ℕ in atTop, ∀w, wordSize lo hi V w → ∀ tq : ℝ,0≤tq →
       ∀ (k : Incremental) (Ω : Type) [MeasurableSpace Ω] (μ : Measure Ω) [IsProbabilityMeasure μ]
         (D : GraphMachine (side V) (extra V) w Ω), GraphCorrect μ D k (singleHistories (side V)) →
         UpdateQueryCost μ D k (tu V) tq → c*ratio V w (tu V)≤tq := by
-  obtain ⟨c,cp,h⟩ := incremental_query AmortizedBound.query_tradeoff lo hi lp lh tu unit sub
-  refine ⟨c,cp,?_⟩
-  have allV := eventual_vertices _ h
+  obtain ⟨c,cp,h⟩ := incremental_query AmortizedBound.query_tradeoff lo hi lp lh
+  refine ⟨c,cp,fun tu unit sub => ?_⟩
+  have allV := eventual_vertices _ (h tu unit sub)
   filter_upwards [allV,eventually_ge_atTop 1] with V lower vp
   have eq := exact_vertices vp
   change graphSize ((V-1)/2) (V-(2*((V-1)/2)+1))=V at eq
